@@ -1,0 +1,132 @@
+/* Container mirroring your verifyEmail.css */
+.verify-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f4f7f6;
+    padding: 20px;
+}
+
+/* Card layout */
+.verify-card {
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+    box-shadow: 0 16px 36px -8px rgba(37, 99, 235, 0.22), 0 6px 16px -4px rgba(37, 99, 235, 0.12);}
+
+
+
+/* Brand header styling */
+.verify-brand-header {
+    margin-bottom: 25px;
+}
+
+.verify-logo {
+    width: 60px;
+    height: auto;
+    margin-bottom: 10px;
+}
+
+.verify-brand-header h2 {
+    font-size: 16px;
+    color: #0f25a2;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+/* Content box header */
+.verify-content-box h3 {
+    font-size: 22px;
+    color: #0f25a2;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+/* Form group styles */
+.signup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    text-align: left;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f25a2;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+    box-shadow: 0 16px 36px -8px rgba(37, 99, 235, 0.22), 0 6px 16px -4px rgba(37, 99, 235, 0.12);}
+
+
+
+.form-group input:focus {
+    border-color: #0f25a2;
+}
+
+/* Status boxes for errors / success */
+.verify-status-box {
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: left;
+    margin-bottom: 15px;
+}
+
+.verify-status-box.error {
+    background-color: #fdf2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.verify-status-box.success {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+/* Action button matching your verification page */
+.verify-action-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #0f25a2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+    box-shadow: 0 16px 36px -8px rgba(37, 99, 235, 0.22), 0 6px 16px -4px rgba(37, 99, 235, 0.12);}
+
+
+
+.verify-action-btn:hover {
+    background-color: #96a4f5;
+}
+
+.verify-action-btn:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+}
