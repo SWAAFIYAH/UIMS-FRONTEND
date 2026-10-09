@@ -5,6 +5,8 @@ import SubmitPlacementForm from "./pages/submitPlacementForm";
 import VerifyEmail from "./pages/verifyEmail";
 import { Routes, Route } from 'react-router-dom';
 import OukDashboard from "./coordinator/dashboard";
+import PlacementDashboard from "./coordinator/placement";
+import SupervisorDashboard from "./coordinator/supervisor-dash";
 
 
 function App() {
@@ -24,6 +26,8 @@ function App() {
       <Route path="/student-dashboard" element={<StudentDashboard />} />
       <Route path="/submit-placement" element={<SubmitPlacementForm />} />
       <Route path="/coordinator-dashboard" element={<OukDashboard />} />
+      <Route path="/coordinator-placements" element={<PlacementDashboard />} />
+      <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
       
     </Routes>
   );

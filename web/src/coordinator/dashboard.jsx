@@ -233,7 +233,7 @@ export default function OukDashboard({
             <button className="icon" type="button" aria-label="Toggle dark mode" onClick={() => setDark((d) => !d)}>◐</button>
             <div className="profile">
               <div className="avatar">CO</div>
-              <span><b>Coordinator</b><br /><small className="muted">Internship Office</small></span>
+              <span><b>Alvin Wekesa</b><br /><small className="muted">Internship Office</small></span>
             </div>
           </div>
         </header>
@@ -243,7 +243,7 @@ export default function OukDashboard({
             <section>
               <div className="header">
                 <div>
-                  <h1>Good afternoon, Coordinator 👋</h1>
+                  <h1>Hello coordinator👋</h1>
                   <div className="muted">Here's what's happening with student internships today.</div>
                 </div>
               </div>
