@@ -1,27 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import './studentDashboard.css';
 import logo from '../assets/logo.png';
 import SubmitPlacementForm from "./submitPlacementForm";
+import client from "../api/client";
 
 export default function StudentDashboard() {
     const [activeTab, setActiveTab] = useState("Dashboard");
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    
+
+    // User profile state fetched from API
+    const [user, setUser] = useState({
+        full_name: "Jane Njeri",
+        program: "BSc Computer Science"
+    });
+
     // Simulate placement status: can be "none", "pending", or "active"
-    const [placementStatus, setPlacementStatus] = useState(()=>{
+    /*const [placementStatus, setPlacementStatus] = useState(() => {
         const storedUser = JSON.parse(localStorage.getItem("user"));
         return storedUser?.placement_status || storedUser?.placementStatus || "none";
-    }); 
+    }); */
+    const [placementStatus, setPlacementStatus] = useState("active");
 
     const navigate = useNavigate();
+
+    // Fetch live user data on mount
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const response = await client.get('/auth/me/');
+                setUser(prev => ({
+                ...prev,
+                ...response.data
+            }));
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+            }
+        };
+        fetchUserData();
+    }, []);
 
     const handleLogout = () => {
         localStorage.clear();
         toast.info("Logged out successfully");
         navigate("/");
+    };
+
+    const getInitials = (name) => {
+        if (!name) return "U";
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase();
     };
 
     return (
@@ -52,15 +85,15 @@ export default function StudentDashboard() {
                     </a>
 
                     <a 
-                    href="#logout" 
-                    className="logout-nav-link" 
-                    onClick={(e) => { 
-                        e.preventDefault(); 
-                        handleLogout(); 
-                    }}
-                >
-                    Logout
-                </a>
+                        href="#logout" 
+                        className="logout-nav-link" 
+                        onClick={(e) => { 
+                            e.preventDefault(); 
+                            handleLogout(); 
+                        }}
+                    >
+                        Logout
+                    </a>
                 </nav>
             </aside>
 
@@ -76,11 +109,11 @@ export default function StudentDashboard() {
                             </button>
                             <div>
                                 <span className="welcome-sub">Welcome back</span>
-                                <h1 className="user-fullname">Jane Njeri</h1>
-                                <p className="user-program">BSc Computer Science</p>
+                                <h1 className="user-fullname">{user.full_name}</h1>
+                                <p className="user-program">{user.program}</p>
                             </div>
                         </div>
-                        <div className="user-avatar-badge">JN</div>
+                        <div className="user-avatar-badge">{getInitials(user.full_name)}</div>
                     </div>
 
                     {/* MAIN TAB & STATUS ROUTING */}
