@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Base API URL where your FastAPI / Django backend is hosted
-const API_BASE_URL = 'http://localhost:8000'; 
+// Live Production Backend Base URL hosted on Railway
+const API_BASE_URL = 'https://uimsystem-production.up.railway.app'; 
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -10,20 +10,23 @@ const api = axios.create({
   },
 });
 
-// Automatically attach JWT token from localStorage
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Interceptor to automatically attach JWT Bearer token from localStorage to every request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 /* ==========================================================================
    1. SUPERVISOR LOGBOOKS & ASSIGNED STUDENTS ENDPOINTS
    ========================================================================== */
 
-// GET /api/logbooks/students/ -> Fetch assigned students list
+// GET /api/logbooks/students/ -> Fetch assigned students roster
 export const fetchAssignedStudents = async () => {
   const response = await api.get('/api/logbooks/students/');
   return response.data;
@@ -35,13 +38,13 @@ export const fetchLogbooksOverview = async () => {
   return response.data;
 };
 
-// GET /api/logbooks/students/{placement_id}/entries/ -> Fetch logbooks for a specific student placement
+// GET /api/logbooks/students/{placement_id}/entries/ -> Fetch logbook entries for a specific placement
 export const fetchStudentLogbookEntries = async (placementId) => {
   const response = await api.get(`/api/logbooks/students/${placementId}/entries/`);
   return response.data;
 };
 
-// POST /api/logbooks/{entry_id}/feedback/ -> Submit new logbook feedback
+// POST /api/logbooks/{entry_id}/feedback/ -> Submit new logbook feedback/approval
 export const submitLogbookFeedback = async (entryId, feedbackData) => {
   const response = await api.post(`/api/logbooks/${entryId}/feedback/`, feedbackData);
   return response.data;
@@ -57,13 +60,13 @@ export const updateLogbookFeedback = async (entryId, feedbackData) => {
    2. FIELD VISITS MONITORING ENDPOINTS
    ========================================================================== */
 
-// GET /api/logbooks/visits/ -> Fetch field visits logged by supervisor
+// GET /api/logbooks/visits/ -> Fetch field visits logged by the supervisor
 export const fetchFieldVisits = async () => {
   const response = await api.get('/api/logbooks/visits/');
   return response.data;
 };
 
-// POST /api/logbooks/visits/ -> Log a new field visit
+// POST /api/logbooks/visits/ -> Log a new field visit record
 export const createFieldVisit = async (visitData) => {
   const response = await api.post('/api/logbooks/visits/', visitData);
   return response.data;
@@ -79,7 +82,7 @@ export const fetchSupervisorEvaluations = async () => {
   return response.data;
 };
 
-// POST /api/evaluations/supervisor/ -> Submit academic evaluation score
+// POST /api/evaluations/supervisor/ -> Submit academic evaluation rubric scores
 export const submitSupervisorEvaluation = async (evaluationData) => {
   const response = await api.post('/api/evaluations/supervisor/', evaluationData);
   return response.data;
@@ -95,7 +98,7 @@ export const finaliseStudentEvaluation = async (placementId) => {
    4. WORKLOAD & ANALYTICS REPORTS ENDPOINTS
    ========================================================================== */
 
-// GET /api/reports/my-workload/ -> Fetch personal workload statistics
+// GET /api/reports/my-workload/ -> Fetch supervisor workload metrics
 export const fetchMyWorkloadReport = async () => {
   const response = await api.get('/api/reports/my-workload/');
   return response.data;
