@@ -1,6 +1,7 @@
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import StudentDashboard from "./pages/studentDashboard";
+import SubmitLogbookForm from "./pages/submitLogbookForm";
 import SubmitPlacementForm from "./pages/submitPlacementForm";
 import VerifyEmail from "./pages/verifyEmail";
 import { Routes, Route } from 'react-router-dom';
@@ -28,12 +29,13 @@ function App() {
       <Route path="/coordinator-dashboard" element={<OukDashboard />} />
       <Route path="/coordinator-placements" element={<PlacementDashboard />} />
       <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
-      
+
+      {/*logbook pages*/}
+      <Route path="/submit-logbook" element={<SubmitLogbookForm/>}/>
     </Routes>
   );
 }
 
 export default App;
-
 
 
