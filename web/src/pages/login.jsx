@@ -32,6 +32,7 @@ export default function Login(){
 
            if (response && response.user) {
                 console.log("USER ROLE:", response.user.role);
+                localStorage.setItem('userName', response.user.name)
                 if (response.user.role === "student") {
                     navigate("/student-dashboard");
                 } else {
