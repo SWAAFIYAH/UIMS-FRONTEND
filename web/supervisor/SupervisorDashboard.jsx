@@ -9,17 +9,21 @@ import {
   createFieldVisit,
   submitSupervisorEvaluation,
   finaliseStudentEvaluation,
-  fetchMyWorkloadReport
+  fetchMyWorkloadReport,
+  fetchPlacements,        // <-- ADDED
+  approvePlacement,       // <-- ADDED
+  rejectPlacement         // <-- ADDED
 } from '../src/api/supervisorApi';
 
 function SupervisorDashboard() {
-  // Navigation tab state: 'dashboard' | 'logbooks' | 'visits' | 'students' | 'assessment' | 'reports'
+  // Navigation tab state: 'dashboard' | 'placements' | 'logbooks' | 'visits' | 'students' | 'assessment' | 'reports'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Data States connected to Backend
   const [studentsList, setStudentsList] = useState([]);
+  const [placementsList, setPlacementsList] = useState([]); // <-- ADDED
   const [logbooksList, setLogbooksList] = useState([]);
   const [visitsList, setVisitsList] = useState([]);
   const [workloadReport, setWorkloadReport] = useState(null);
@@ -31,6 +35,10 @@ function SupervisorDashboard() {
   const [isDyslexicFont, setIsDyslexicFont] = useState(false);
 
   // Modals state
+  const [showPlacementModal, setShowPlacementModal] = useState(false); // <-- ADDED
+  const [selectedPlacement, setSelectedPlacement] = useState(null);   // <-- ADDED
+  const [placementRemarks, setPlacementRemarks] = useState('');       // <-- ADDED
+
   const [showLogbookModal, setShowLogbookModal] = useState(false);
   const [selectedLogbook, setSelectedLogbook] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
@@ -75,6 +83,13 @@ function SupervisorDashboard() {
         const studentsData = await fetchAssignedStudents();
         setStudentsList(studentsData || []);
 
+        try {
+          const placementsData = await fetchPlacements();
+          setPlacementsList(placementsData || []);
+        } catch (pErr) {
+          console.warn("Placements API error or unpopulated:", pErr);
+        }
+
         if (studentsData && studentsData.length > 0) {
           setCurrentStudent(studentsData[0]);
           const initialLogbooks = await fetchStudentLogbookEntries(studentsData[0].placement_id || studentsData[0].id);
@@ -111,6 +126,7 @@ function SupervisorDashboard() {
   // Dynamic Calculations from Backend State
   const atRiskStudents = studentsList.filter(s => s.risk_status === 'AT_RISK' || s.is_at_risk === true);
   const pendingLogbooks = logbooksList.filter(l => l.status === 'PENDING');
+  const pendingPlacements = placementsList.filter(p => (p.status || '').toUpperCase() === 'PENDING'); // <-- ADDED
 
   // Scorecard Calculations
   let totalRawScore = rubricScores.reduce((sum, item) => sum + item.score, 0);
@@ -128,6 +144,41 @@ function SupervisorDashboard() {
 
   function updateScore(id, newScore) {
     setRubricScores(rubricScores.map(item => item.id === id ? { ...item, score: newScore } : item));
+  }
+
+  // Placement Modal Handlers
+  function openPlacementModal(placement) {
+    setSelectedPlacement(placement);
+    setPlacementRemarks('');
+    setShowPlacementModal(true);
+  }
+
+  async function handleApprovePlacement() {
+    if (!selectedPlacement) return;
+    try {
+      await approvePlacement(selectedPlacement.id, { remarks: placementRemarks });
+      alert("Placement approved successfully!");
+      setShowPlacementModal(false);
+      const updated = await fetchPlacements();
+      setPlacementsList(updated || []);
+    } catch (err) {
+      console.error("Error approving placement:", err);
+      alert("Failed to approve placement.");
+    }
+  }
+
+  async function handleRejectPlacement() {
+    if (!selectedPlacement) return;
+    try {
+      await rejectPlacement(selectedPlacement.id, { remarks: placementRemarks });
+      alert("Placement rejected/sent back for revision.");
+      setShowPlacementModal(false);
+      const updated = await fetchPlacements();
+      setPlacementsList(updated || []);
+    } catch (err) {
+      console.error("Error rejecting placement:", err);
+      alert("Failed to reject placement.");
+    }
   }
 
   function openLogbookModal(logbook) {
@@ -250,7 +301,6 @@ function SupervisorDashboard() {
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-logo">
-            {/* Enlarged UIMS Logo Image Badge */}
             <img 
               src="/logo.png" 
               alt="UIMS Logo" 
@@ -270,6 +320,10 @@ function SupervisorDashboard() {
         <nav className="sidebar-nav">
           <button className={activeTab === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => handleTabChange('dashboard')}>
             <span>Dashboard</span>
+          </button>
+          <button className={activeTab === 'placements' ? 'nav-item active' : 'nav-item'} onClick={() => handleTabChange('placements')}>
+            <span>Placements</span>
+            <span className="badge">{pendingPlacements.length} Pending</span>
           </button>
           <button className={activeTab === 'logbooks' ? 'nav-item active' : 'nav-item'} onClick={() => handleTabChange('logbooks')}>
             <span>Logbooks</span>
@@ -349,6 +403,10 @@ function SupervisorDashboard() {
                   <span className="stat-value">{studentsList.length}</span>
                 </div>
                 <div className="stat-card">
+                  <span className="stat-label">Pending Placements</span>
+                  <span className="stat-value text-orange">{pendingPlacements.length}</span>
+                </div>
+                <div className="stat-card">
                   <span className="stat-label">Pending Logbook Reviews</span>
                   <span className="stat-value text-orange">{pendingLogbooks.length}</span>
                 </div>
@@ -356,20 +414,21 @@ function SupervisorDashboard() {
                   <span className="stat-label">Scheduled Visits</span>
                   <span className="stat-value text-blue">{visitsList.length}</span>
                 </div>
-                <div className="stat-card">
-                  <span className="stat-label">At Risk Students</span>
-                  <span className="stat-value text-red">{atRiskStudents.length}</span>
-                </div>
               </div>
 
               {/* Dynamic Recent Activity Feed */}
               <div className="card-box" style={{ marginTop: '1.5rem' }}>
                 <h3 className="box-title">Recent Activity & Updates</h3>
                 <ul className="activity-list">
-                  {logbooksList.length === 0 && visitsList.length === 0 ? (
+                  {logbooksList.length === 0 && visitsList.length === 0 && placementsList.length === 0 ? (
                     <li style={{ color: 'var(--text-muted)' }}>No recent activity recorded yet. Entries will appear as students submit logbooks and visits are logged.</li>
                   ) : (
                     <>
+                      {placementsList.slice(0, 2).map((p, idx) => (
+                        <li key={`act-plc-${idx}`}>
+                          Placement request submitted by <strong>{p.student_name || p.student || 'Student'}</strong> for <strong>{p.company || p.company_name || 'Host Org'}</strong>
+                        </li>
+                      ))}
                       {logbooksList.slice(0, 3).map((item, idx) => (
                         <li key={`act-log-${idx}`}>
                           <strong>{item.student_name || 'Student'}</strong> submitted Weekly Logbook Entry (Week {item.week_number || 1})
@@ -387,7 +446,57 @@ function SupervisorDashboard() {
             </section>
           )}
 
-          {/* TAB 2: LOGBOOKS */}
+          {/* TAB 2: PLACEMENTS (NEWLY ADDED) */}
+          {activeTab === 'placements' && (
+            <section className="tab-view">
+              <div className="action-header">
+                <h1 className="page-title">Student Internship Placements</h1>
+              </div>
+              <div className="card-box">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Company / Organization</th>
+                      <th>Role / Title</th>
+                      <th>Location</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {placementsList.length === 0 ? (
+                      <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem' }}>No student placements submitted yet.</td></tr>
+                    ) : (
+                      placementsList.map((item) => (
+                        <tr key={item.id}>
+                          <td><strong>{item.student_name || item.student || 'Student'}</strong></td>
+                          <td>{item.company || item.company_name || 'Host Org'}</td>
+                          <td>{item.role || item.job_title || 'Intern'}</td>
+                          <td>{item.location || 'N/A'}</td>
+                          <td>
+                            <span className="pill-status" style={{
+                              background: (item.status || '').toUpperCase() === 'APPROVED' ? '#ecfdf5' : (item.status || '').toUpperCase() === 'REJECTED' ? '#fef2f2' : '#fef3c7',
+                              color: (item.status || '').toUpperCase() === 'APPROVED' ? '#10b981' : (item.status || '').toUpperCase() === 'REJECTED' ? '#ef4444' : '#d97706'
+                            }}>
+                              {item.status || 'PENDING'}
+                            </span>
+                          </td>
+                          <td>
+                            <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} onClick={() => openPlacementModal(item)}>
+                              Review & Decision
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* TAB 3: LOGBOOKS */}
           {activeTab === 'logbooks' && (
             <section className="tab-view">
               <div className="action-header">
@@ -437,7 +546,7 @@ function SupervisorDashboard() {
             </section>
           )}
 
-          {/* TAB 3: VISITS */}
+          {/* TAB 4: VISITS */}
           {activeTab === 'visits' && (
             <section className="tab-view">
               <div className="action-header">
@@ -475,7 +584,7 @@ function SupervisorDashboard() {
             </section>
           )}
 
-          {/* TAB 4: ASSIGNED STUDENTS */}
+          {/* TAB 5: ASSIGNED STUDENTS */}
           {activeTab === 'students' && (
             <section className="tab-view">
               <div className="action-header">
@@ -524,7 +633,7 @@ function SupervisorDashboard() {
             </section>
           )}
 
-          {/* TAB 5: ASSESSMENT */}
+          {/* TAB 6: ASSESSMENT */}
           {activeTab === 'assessment' && (
             <section className="tab-view">
               <div className="sub-breadcrumb">SUPERVISOR PORTAL / ACADEMIC EVALUATION</div>
@@ -656,7 +765,7 @@ function SupervisorDashboard() {
             </section>
           )}
 
-          {/* TAB 6: REPORTS & ANALYTICS */}
+          {/* TAB 7: REPORTS & ANALYTICS */}
           {activeTab === 'reports' && (
             <section className="tab-view">
               <div className="action-header">
@@ -689,7 +798,6 @@ function SupervisorDashboard() {
                 </div>
               </div>
 
-              {/* Dynamic Status Badges in Performance Summary Table */}
               <div className="card-box">
                 <h3 className="box-title">Student Performance Summary</h3>
                 <table className="data-table">
@@ -745,13 +853,45 @@ function SupervisorDashboard() {
         </div>
       </main>
 
+      {/* PLACEMENT MODAL (NEWLY ADDED) */}
+      {showPlacementModal && selectedPlacement && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <h3>Review Internship Placement</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Student: <strong>{selectedPlacement.student_name || selectedPlacement.student || 'Student'}</strong>
+            </p>
+            <div style={{ background: 'var(--light-bg)', padding: '1rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              <p><strong>Company:</strong> {selectedPlacement.company || selectedPlacement.company_name || 'N/A'}</p>
+              <p style={{ marginTop: '0.3rem' }}><strong>Role:</strong> {selectedPlacement.role || selectedPlacement.job_title || 'N/A'}</p>
+              <p style={{ marginTop: '0.3rem' }}><strong>Location:</strong> {selectedPlacement.location || 'N/A'}</p>
+            </div>
+
+            <div className="remarks-box" style={{ marginTop: '1rem' }}>
+              <label>Supervisor Remarks / Notes:</label>
+              <textarea 
+                rows="3" 
+                placeholder="Type remarks or feedback for placement approval/rejection..." 
+                value={placementRemarks} 
+                onChange={(e) => setPlacementRemarks(e.target.value)} 
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <button className="btn btn-secondary" onClick={() => setShowPlacementModal(false)}>Cancel</button>
+              <button className="btn btn-secondary" style={{ color: '#ef4444', borderColor: '#fca5a5' }} onClick={handleRejectPlacement}>Reject</button>
+              <button className="btn btn-primary" onClick={handleApprovePlacement}>Approve Placement</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* LOGBOOK MODAL */}
       {showLogbookModal && selectedLogbook && (
         <div className="modal-overlay">
           <div className="modal-card">
             <h3>Review Weekly Logbook</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              {selectedLogbook.student_name || 'Student'} • Week {selectedLogbook.week_number || 1}
+              {selectedLogbook.student_name || 'Student'} - Week {selectedLogbook.week_number || 1}
             </p>
             <div style={{ background: 'var(--light-bg)', padding: '1rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem' }}>
               <strong>Student Entry:</strong>
@@ -835,7 +975,7 @@ function SupervisorDashboard() {
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/>
-            <path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+            <path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 4z"/>
             <path d="M12 10v6"/>
             <path d="M9 13l3-1 3 1"/>
             <path d="M10 18l2-2 2 2"/>

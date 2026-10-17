@@ -24,14 +24,11 @@ function App() {
       <Route path="/student-dashboard" element={<StudentDashboard />} />
       <Route path="/submit-placement" element={<SubmitPlacementForm />} />
 
-<<<<<<< HEAD
       {/* Supervisor Dashboard route */}
       <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
       <Route path="/supervisor" element={<SupervisorDashboard />} />
-=======
       {/*logbook pages*/}
       <Route path="/submit-logbook" element={<SubmitLogbookForm/>}/>
->>>>>>> b12c1b62e5d8464bf40c25f4ab41d0846fcf4223
     </Routes>
   );
 }
