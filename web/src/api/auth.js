@@ -6,8 +6,8 @@ export const login = async (email, password) => {
     
     // 2. Use 'data' (not 'response') and the correct plural 'tokens' key
     if (data.tokens) {
-        localStorage.setItem("accesstoken", data.tokens.access);
-        localStorage.setItem("refreshtoken", data.tokens.refresh);
+        localStorage.setItem("accessToken", data.tokens.access);
+        localStorage.setItem("refreshToken", data.tokens.refresh);
     }
     
     if (data.user) {

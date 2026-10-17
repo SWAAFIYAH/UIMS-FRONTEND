@@ -32,10 +32,21 @@ export default function Login(){
 
            if (response && response.user) {
                 console.log("USER ROLE:", response.user.role);
+                localStorage.setItem('userName', response.user.name)
                 if (response.user.role === "student") {
                     navigate("/student-dashboard");
-                } else {
-                    toast.error("Access restricted to students.");
+                } 
+                else if (response.user.role === "supervisor") {
+                    navigate("/supervisor-dashboard");
+                }
+                else if (response.user.role === "coordinator") {
+                    navigate("/coordinator-dashboard");
+                }
+
+                else if (response.user.role === "admin") {
+                    navigate("/admin-dashboard");
+                } else{
+                    toast.error("invalid role");
                 }
             } else {
                 console.log("Could not find user object in response structure.");
