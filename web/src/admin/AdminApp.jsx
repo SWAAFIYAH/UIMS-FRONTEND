@@ -16,7 +16,6 @@ import {
   LogOut,
   X,
  UserRoundCog,
-  UserCheck,
 } from "lucide-react";
 
 import Students from "./Students";
@@ -30,12 +29,11 @@ import "./App.css";
 import StaffManagement from "./StaffManagement";
 
 
+
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Students", icon: Users },
   { label: "Organisations", icon: Building2 },
-  { label: "Coordinators", icon: UserRoundCog },
-  { label: "Supervisors", icon: UserCheck },
   { label: "Applications", icon: FileText },
   { label: "Placements", icon: BriefcaseBusiness },
   { label: "Grades", icon: GraduationCap },
@@ -45,44 +43,22 @@ const navigation = [
 ];
 
 
+
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  
   function renderPage() {
     switch (activePage) {
       case "Dashboard":
         return (
           <>
             <div className="stats-grid">
-              <StatCard
-                title="Total Students"
-                value="—"
-                icon={Users}
-                color="purple"
-                description="Awaiting database connection"
-              />
-              <StatCard
-                title="Organisations"
-                value="—"
-                icon={Building2}
-                color="blue"
-                description="Awaiting database connection"
-              />
-              <StatCard
-                title="Applications"
-                value="—"
-                icon={FileText}
-                color="orange"
-                description="Awaiting database connection"
-              />
-              <StatCard
-                title="Placements"
-                value="—"
-                icon={BriefcaseBusiness}
-                color="green"
-                description="Awaiting database connection"
-              />
+              <StatCard title="Total Students" value="—" icon={Users} color="purple" description="Awaiting database connection" />
+              <StatCard title="Organisations" value="—" icon={Building2} color="blue" description="Awaiting database connection" />
+              <StatCard title="Applications" value="—" icon={FileText} color="orange" description="Awaiting database connection" />
+              <StatCard title="Placements" value="—" icon={BriefcaseBusiness} color="green" description="Awaiting database connection" />
             </div>
 
             <div className="content-grid">
@@ -103,8 +79,7 @@ function App() {
                   </div>
                   <h4>No data available yet</h4>
                   <p>
-                    Connect the backend and database to display your
-                    university records here.
+                    Connect the backend and database to display your university records here.
                   </p>
                 </div>
               </section>
@@ -120,7 +95,6 @@ function App() {
                 <div className="quick-links">
                   {navigation.slice(1, 5).map((item) => {
                     const Icon = item.icon;
-
                     return (
                       <button
                         key={item.label}
@@ -144,47 +118,29 @@ function App() {
 
       case "Students":
         return <Students />;
+
       case "Organisations":
         return <Organisations />;
+
       case "Applications":
         return <Applications />;
+
       case "Placements":
         return <Placements />;
+
       case "Grades":
         return <Grades />;
+
       case "Reports":
         return <Reports />;
+
       case "Settings":
         return <Settings />;
+
+      case "Staff Management":
+        return <StaffManagement role="All" />;
+
       default:
-        
-      case "Coordinators":
-        return (
-          <section className="panel section-placeholder">
-            <h3>Coordinator Management</h3>
-            <p>
-              Manage university coordinators here.
-              Coordinator registration will be added next.
-            </p>
-          </section>
-        );
-
-      case "Supervisors":
-        return (
-          <section className="panel section-placeholder">
-            <h3>Supervisor Management</h3>
-            <p>
-              Manage placement supervisors here.
-              Supervisor registration will be added next.
-            </p>
-          </section>
-        );
-        case "Coordinators":
-  return <StaffManagement role="Coordinators" />;
-
-case "Supervisors":
-  return <StaffManagement role="Supervisors" />;
-
         return (
           <section className="panel section-placeholder">
             <h3>Page not found</h3>
@@ -200,7 +156,6 @@ case "Supervisors":
         );
     }
   }
-
   return (
     <div className="app-layout">
       {sidebarOpen && (

@@ -2736,3 +2736,262 @@
   }
 }
 
+/* STAFF MANAGEMENT FORM */
+
+.staff-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.staff-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.staff-toolbar h2 {
+  margin: 0 0 8px;
+  color: #30334a;
+  font-size: 22px;
+}
+
+.staff-toolbar p {
+  margin: 0;
+  color: #999cad;
+  font-size: 12px;
+}
+
+.staff-summary {
+  display: flex;
+  gap: 20px;
+}
+
+.staff-summary > div {
+  flex: 1;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #eeeef5;
+  border-radius: 12px;
+}
+
+.staff-summary span,
+.staff-summary strong {
+  display: block;
+}
+
+.staff-summary span {
+  margin-bottom: 8px;
+  color: #85889c;
+  font-size: 12px;
+}
+
+.staff-summary strong {
+  color: #30334a;
+  font-size: 24px;
+}
+
+.staff-panel {
+  min-width: 0;
+}
+
+.staff-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 400px;
+  padding: 12px 14px;
+  color: #999cad;
+  background: #fff;
+  border: 1px solid #e4e5ef;
+  border-radius: 9px;
+}
+
+.staff-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+}
+
+.staff-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 24px 0;
+  padding: 24px;
+  background: #fafaff;
+  border: 1px solid #e8e7f5;
+  border-radius: 12px;
+}
+
+.staff-form-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.staff-form-heading h3 {
+  margin: 0;
+  color: #30334a;
+  font-size: 17px;
+}
+
+.staff-close {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  color: #73778d;
+  background: #f0eff8;
+  border: 0;
+  border-radius: 8px;
+}
+
+.staff-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.staff-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  color: #45485e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.staff-form-grid input,
+.staff-form-grid select {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  box-sizing: border-box;
+  color: #30334a;
+  background: #fff;
+  border: 1px solid #dfe1ed;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.staff-form-grid input:focus,
+.staff-form-grid select:focus {
+  border-color: #5145cd;
+  outline: 3px solid #efedff;
+}
+
+.staff-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.staff-form-actions .primary-button {
+  margin-top: 0;
+}
+
+.staff-cancel {
+  padding: 11px 16px;
+  color: #666a80;
+  background: #f0f1f6;
+  border: 0;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.staff-table-wrap {
+  width: 100%;
+  margin-top: 22px;
+  overflow-x: auto;
+}
+
+.staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.staff-table th {
+  padding: 14px;
+  color: #85889c;
+  background: #f8f8fc;
+  border-bottom: 1px solid #eeeef5;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.staff-table td {
+  padding: 14px;
+  color: #62667d;
+  border-bottom: 1px solid #f0f0f5;
+  font-size: 12px;
+}
+
+.staff-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.staff-actions button {
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  color: #5145cd;
+  background: #efedff;
+  border: 0;
+  border-radius: 8px;
+}
+
+.staff-actions button:last-child {
+  color: #d44747;
+  background: #ffebeb;
+}
+
+.staff-empty {
+  padding: 30px !important;
+  text-align: center;
+}
+
+.staff-note {
+  margin-top: 16px;
+  color: #85889c;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .staff-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .staff-summary {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .staff-form {
+    padding: 16px;
+  }
+
+  .staff-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .staff-form-actions button {
+    width: 100%;
+  }
+}
+
