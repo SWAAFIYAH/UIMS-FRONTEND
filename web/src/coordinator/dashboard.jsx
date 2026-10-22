@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Children } from "react";
+import { Link } from "react-router-dom";
 
 const css = `
 :root{--p:#0b3d91;--nav:#0b2454;--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--border:#e5e7eb;--green:#16a34a;--red:#dc2626;--orange:#d97706}
@@ -10,7 +11,7 @@ const css = `
 .logoicon{width:42px;height:42px;background:#fff;color:var(--p);border-radius:10px;display:grid;place-items:center;font-weight:bold}
 .logo h3{margin:0;font-size:16px}.logo small{color:#b9c8e8}
 .mt{color:#91a4c9;font-size:11px;text-transform:uppercase;margin:24px 10px 8px}
-.nav{width:100%;border:0;background:transparent;color:#dce7fa!important;text-align:left;padding:12px;border-radius:8px;margin:3px 0}
+.nav{display:block;width:100%;border:0;background:transparent;color:#dce7fa!important;text-align:left;text-decoration:none;padding:12px;border-radius:8px;margin:3px 0}
 .nav:hover,.nav.active{background:#ffffff1c}.badge{float:right;background:var(--red);padding:2px 7px;border-radius:20px;font-size:11px}
 .main{margin-left:250px}
 .top{height:70px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:5}
@@ -216,7 +217,7 @@ export default function OukDashboard({
         {navBtn("logbooks", "▤ \u00a0 Logbooks")}
         {navBtn("evaluations", "✓ \u00a0 Evaluations")}
         {navBtn("grades", "★ \u00a0 Grades")}
-        <button className="nav" type="button" onClick={() => toast("Reports are coming soon.")}>▥ &nbsp; Reports</button>
+        <Link className="nav" to="/coordinator-reports">▥ &nbsp; Reports</Link>
         <button className="nav" type="button" onClick={() => toast("Settings opened.")}>⚙ &nbsp; Settings</button>
       </aside>
 

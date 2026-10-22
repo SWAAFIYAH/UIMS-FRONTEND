@@ -8,6 +8,9 @@ import { Routes, Route } from 'react-router-dom';
 import OukDashboard from "./coordinator/dashboard";
 import PlacementDashboard from "./coordinator/placement";
 import SupervisorDashboard from "./coordinator/supervisor-dash";
+import Logbooks from "./coordinator/logbook";
+import Grades from "./coordinator/Grades";
+import ReportOversight from "./coordinator/reports";
 
 
 function App() {
@@ -28,14 +31,15 @@ function App() {
       <Route path="/submit-placement" element={<SubmitPlacementForm />} />
       <Route path="/coordinator-dashboard" element={<OukDashboard />} />
       <Route path="/coordinator-placements" element={<PlacementDashboard />} />
+      <Route path="/coordinator-logbooks" element={<Logbooks />} />
       <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
+      <Route path="/coordinator-grades" element={<Grades />} />
+      <Route path="/coordinator-reports" element={<ReportOversight />} />
 
-      {/*logbook pages*/}
-      <Route path="/submit-logbook" element={<SubmitLogbookForm/>}/>
+      {/* Logbook pages */}
+      <Route path="/submit-logbook" element={<SubmitLogbookForm />} />
     </Routes>
   );
 }
 
 export default App;
-
-
