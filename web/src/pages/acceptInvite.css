@@ -1,0 +1,160 @@
+/* Theme Palette using your brand color (#f25a2b) */
+
+/* Container & Layout */
+.accept-invite-container {
+  max-width: 440px;
+  margin: 60px auto;
+  padding: 36px 32px;
+  background-color: var(--bg-card);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px -8px rgba(37, 99, 235, 0.22), 0 6px 16px -4px rgba(37, 99, 235, 0.12);
+  border: 1px solid #e5e7eb;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-main);
+}
+
+.accept-invite-title {
+  margin: 0 0 6px 0;
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: #0f25a2;
+  text-align: center;
+  letter-spacing: -0.025em;
+}
+
+.accept-invite-subtitle {
+  margin: 0 0 28px 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Form Groups & Inputs */
+.form-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.form-input {
+  width: 100%;
+  padding: 11px 11px;
+  font-size: 0.95rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px var(--primary-focus-ring);
+}
+
+/* Disabled/Read-only Inputs */
+.form-input:disabled,
+.form-input-readonly {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+  font-weight: 500;
+}
+
+/* Submit Button */
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #0f25a2;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 4px 6px -1px rgba(242, 90, 43, 0.2);
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: #ffffff;
+  color: #0f25a2;
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.submit-btn:disabled {
+  background-color: #fbcbbd;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* UI Alert Cards (Error, Success, Loading) */
+.state-card {
+  padding: 18px 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.state-card-loading {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  font-weight: 600;
+  border: 1px solid #fcdad2;
+}
+
+.state-card-error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.state-card-error h4 {
+  margin: 0 0 6px 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.state-card-error p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.state-card-success {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.state-card-success h4 {
+  margin: 0 0 6px 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.state-card-success p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .accept-invite-container {
+    margin: 20px 16px;
+    padding: 24px 20px;
+  }
+}
