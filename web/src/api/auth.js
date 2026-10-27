@@ -21,3 +21,8 @@ export const login = async (email, password) => {
     // 3. Return the entire data object so Login.jsx can inspect response.user.role
     return data;
 };
+
+export const registerStudent = async (studentData) => {
+    const { data } = await client.post("/auth/register/student/", studentData);
+    return data;
+};

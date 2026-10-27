@@ -1,3 +1,4 @@
+import AcceptInvite from "./pages/acceptInvite";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import StudentDashboard from "./pages/studentDashboard";
@@ -18,6 +19,7 @@ function App() {
 
       {/* The email verification page */}
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/invite/accept" element={<AcceptInvite/>}/>
 
       {/* Dashboard and other pages */}
       <Route path="/student-dashboard" element={<StudentDashboard />} />
