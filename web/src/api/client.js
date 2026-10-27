@@ -1,14 +1,14 @@
 import axios from "axios";
 
 const client = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || "https://uimsystem-production.up.railway.app/api",
+    baseURL: import.meta.env.VITE_API_BASE_URL || "https://uims-67iz.onrender.com/api",
 });
 
 // Automatically attach the JWT access token to every request if it exists
 client.interceptors.request.use(
     (config) => {
         // Skip attaching tokens for public auth routes to prevent 401 login blocks
-        if (config.url?.includes("/auth/login/") || config.url?.includes("/auth/register/")) {
+        if (config.url?.includes("/auth/login/") || config.url?.includes("/auth/register/")||config.url?.includes("/auth/invite/accept")||config.url?.includes("/auth/verify-email")||config.url?.includes("/auth/invite/check") ) {
              return config;
         }
 

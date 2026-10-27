@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../api/client'; // Your centralized Axios client
-import './signup.css'; // Optional: style file mirroring your verification design
+import toast from 'react-hot-toast';
 import logo from '../assets/logo.png';
+import { registerStudent } from '../api/auth';
+import './signup.css';
 
 export default function Signup() {
-    const [formData, setFormData]= useState({
-        first_name:'',
-        last_name:'',
-        email:'',
-        student_id:'',
-        password:'',
-        password2:'',
-
-    })
+    const [formData, setFormData] = useState({
+        first_name: '',
+        last_name: '',
+        email: '',
+        student_id: '',
+        password: '',
+        password2: '',
+    });
     
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
@@ -21,8 +21,8 @@ export default function Signup() {
     
     const navigate = useNavigate();
 
-    const handleChange =(e)=>{
-        setFormData({...formData, [e.target.name]: e.target.value});
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleSignup = async (e) => {
@@ -31,24 +31,28 @@ export default function Signup() {
         setSuccessMessage('');
 
         if (formData.password !== formData.password2) {
-            setError('Passwords do not match.');
+            const matchError = 'Passwords do not match.';
+            setError(matchError);
+            toast.error(matchError);
             return;
         }
 
         setLoading(true);
 
         try {
-            // Adjust the endpoint path to match your Django registration route (e.g., /api/auth/register/)
-            const response = await api.post('/auth/register/', formData
-                
-            );
+            const response = await registerStudent(formData);
 
-            setSuccessMessage(
-                response.data.message || 
-                'Registration successful! Please check your email inbox to verify your account before logging in.'
-            );
+            // Define success message properly here
+            const successMsg = response.message || 
+                'Registration successful! Please check your email inbox to verify your account before logging in.';
+
+            // 1. Toast the success message
+            toast.success(successMsg, { duration: 4000 });
+
+            // 2. Set UI success state banner
+            setSuccessMessage(successMsg);
             
-            // Optional: clear form fields
+            // 3. Clear form fields
             setFormData({
                 first_name: '',
                 last_name: '',
@@ -57,16 +61,27 @@ export default function Signup() {
                 password: '',
                 password2: '',
             });
+
+            // 4. Automatically navigate to login page after 3 seconds
+            setTimeout(() => {
+                navigate('/login');
+            }, 3000);
             
         } catch (err) {
-            // Pull backend validation error fields gracefully
+            console.error("Registration error caught:", err);
             const errorData = err.response?.data;
             if (errorData) {
-                const firstKey = Object.keys(errorData)[0];
-                const firstErrorMsg = Array.isArray(errorData[firstKey]) ? errorData[firstKey][0] : errorData[firstKey];
-                setError(typeof firstErrorMsg === 'string' ? `${firstKey}: ${firstErrorMsg}` : 'Registration failed. Please check your inputs.');
+                const errorMessages = Object.entries(errorData).map(([field, messages]) => {
+                    const msg = Array.isArray(messages) ? messages[0] : messages;
+                    return `${msg}`;
+                });
+                const firstError = errorMessages[0] || 'Registration failed. Please check your inputs.';
+                setError(firstError);
+                toast.error(firstError);
             } else {
-                setError('Registration failed. Please try again.');
+                const fallbackError = 'Registration failed. Please try again.';
+                setError(fallbackError);
+                toast.error(fallbackError);
             }
         } finally {
             setLoading(false);
