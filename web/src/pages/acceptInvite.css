@@ -45,7 +45,7 @@
 
 .form-input {
   width: 100%;
-  padding: 11px 14px;
+  padding: 11px 11px;
   font-size: 0.95rem;
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -79,7 +79,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: #ffffff;
-  background-color: var(--primary-color);
+  background-color: #0f25a2;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -88,7 +88,8 @@
 }
 
 .submit-btn:hover:not(:disabled) {
-  background-color: var(--primary-hover);
+  background-color: #ffffff;
+  color: #0f25a2;
 }
 
 .submit-btn:active:not(:disabled) {
