@@ -1,64 +1,602 @@
 import { useState, useEffect, useRef, Children } from "react";
 import { Link } from "react-router-dom";
+import client from "../api/client";
 
 const css = `
-:root{--p:#0b3d91;--nav:#0b2454;--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--border:#e5e7eb;--green:#16a34a;--red:#dc2626;--orange:#d97706}
-.ouk.dark{--bg:#0f172a;--card:#1e293b;--text:#e5e7eb;--muted:#94a3b8;--border:#334155}
-.ouk *{box-sizing:border-box}.ouk{font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.ouk button,.ouk input,.ouk select,.ouk textarea{font:inherit;color:inherit}.ouk button{cursor:pointer}
-.sidebar{position:fixed;inset:0 auto 0 0;width:250px;background:var(--nav);color:#fff;padding:20px 14px;z-index:10}
-.logo{display:flex;gap:10px;align-items:center;padding:8px 8px 22px;border-bottom:1px solid #ffffff22}
-.logoicon{width:42px;height:42px;background:#fff;color:var(--p);border-radius:10px;display:grid;place-items:center;font-weight:bold}
-.logo h3{margin:0;font-size:16px}.logo small{color:#b9c8e8}
-.mt{color:#91a4c9;font-size:11px;text-transform:uppercase;margin:24px 10px 8px}
-.nav{display:block;width:100%;border:0;background:transparent;color:#dce7fa!important;text-align:left;text-decoration:none;padding:12px;border-radius:8px;margin:3px 0}
-.nav:hover,.nav.active{background:#ffffff1c}.badge{float:right;background:var(--red);padding:2px 7px;border-radius:20px;font-size:11px}
+:root{--p:#0b3d91;
+--nav: #0b2454;
+--bg: #f5f7fb;
+--card: #fff;
+--text: #172033;
+--muted: #6b7280;
+--border: #e5e7eb;
+--green: #16a34a;
+--red: #dc2626;
+--orange: #d97706;
+}
+
+.ouk.dark{
+--bg: #0f172a;
+--card: #1e293b;
+--text: #e5e7eb;
+--muted: #94a3b8;
+--border: #334155;
+}
+
+.ouk *{
+box-sizing: border-box;
+}
+
+.ouk{
+font-family:Segoe UI,Arial,sans-serif;
+background:var(--bg);
+color:var(--text);
+min-height:100vh;
+}
+
+.ouk button,.ouk input,.ouk select,.ouk textarea{
+font:inherit;
+color:inherit;
+}
+
+.ouk button{
+cursor:pointer;
+}
+
+.sidebar{
+position:fixed;
+inset:0 auto 0 0;
+width:250px;
+background:var(--nav);
+color: #fff;
+padding:20px 14px;
+z-index:10;
+}
+
+.logo{
+display:flex;
+gap:10px;
+align-items:center;
+padding:8px 8px 22px;
+border-bottom:1px solid #ffffff22;
+}
+
+.logoicon{
+width:42px;
+height:42px;
+background: #fff;
+color:var(--p);
+border-radius:10px;
+display:grid;
+place-items:center;
+font-weight:bold;
+}
+
+.logo h3{
+margin:0;
+font-size:16px;
+}
+
+.logo small {
+color: #b9c8e8;
+}
+
+.mt{
+color: #91a4c9;
+font-size:11px;
+text-transform:uppercase;
+margin:24px 10px 8px;
+}
+
+.nav{
+display:block;
+width:100%;
+border:0;
+background:transparent;
+color: #dce7fa!important;
+text-align:left;
+text-decoration:none;
+padding:12px;
+border-radius:8px;
+margin:3px 0;
+}
+
+.nav:hover,.nav.active{
+background: #ffffff1c;
+}
+
+.badge{
+float:right;
+background:var(--red);
+padding:2px 7px;
+border-radius:20px;
+font-size:11px;
+}
+
 .main{margin-left:250px}
-.top{height:70px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:5}
-.search{background:var(--bg);border:1px solid var(--border);padding:10px 13px;border-radius:9px;width:320px}.search input{border:0;background:none;outline:0;width:90%}
-.actions{display:flex;align-items:center;gap:12px}.icon{border:1px solid var(--border);background:var(--card);border-radius:8px;padding:9px}
-.avatar{width:38px;height:38px;border-radius:50%;background:var(--p);color:#fff;display:grid;place-items:center;font-weight:bold}.profile{display:flex;gap:8px;align-items:center}
-.content{padding:28px}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.header h1{margin:0 0 5px;font-size:25px}
-.muted{color:var(--muted);font-size:13px}
-.btn{border:0;border-radius:8px;padding:10px 15px;background:var(--p);color:#fff!important}.btn.secondary{background:var(--card);color:var(--text)!important;border:1px solid var(--border)}.btn.success{background:var(--green)}.btn.danger{background:var(--red)}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:17px;margin-bottom:22px}
-.stat,.card{background:var(--card);border:1px solid var(--border);border-radius:13px;box-shadow:0 7px 22px #0f172a0b}
-.stat{padding:18px;display:flex;justify-content:space-between}.stat span{color:var(--muted);font-size:13px}.stat h2{margin:6px 0;font-size:28px}
-.staticon{width:48px;height:48px;border-radius:11px;background:#fff4df;color:var(--orange);display:grid;place-items:center}
-.card{margin-bottom:22px}.cardhead{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:15px}.cardhead h3{margin:0 0 4px;font-size:17px}
-.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:800px}
-th{background:var(--bg);color:var(--muted);font-size:11px;text-align:left;padding:12px;text-transform:uppercase}td{padding:13px;border-top:1px solid var(--border);font-size:13px}
-.student{display:flex;gap:9px;align-items:center}.sa{width:35px;height:35px;border-radius:50%;background:#e8eefb;color:var(--p);display:grid;place-items:center;font-weight:bold}
-.status{padding:5px 9px;border-radius:20px;font-size:11px;font-weight:bold;text-transform:capitalize}
-.s-pending{background:#fff4db;color:#a16207}.s-active{background:#e7f8ed;color:#15803d}.s-rejected{background:#feecec;color:#b91c1c}.s-completed{background:#e8f1ff;color:#1d4ed8}
-.action{border:1px solid var(--border);background:var(--card);padding:7px 10px;border-radius:6px}
-.lower{display:grid;grid-template-columns:1.3fr 1fr;gap:22px}.row{display:flex;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}.row:last-child{border:0}
-.tabs{display:flex;gap:7px;overflow:auto}.tab{padding:8px 13px;border:1px solid var(--border);background:var(--card);border-radius:7px;white-space:nowrap}.tab.active{background:var(--p);color:#fff}
-.modalbg{position:fixed;inset:0;background:#0f172a99;display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}
-.modal{background:var(--card);width:100%;max-width:650px;border-radius:14px;max-height:90vh;overflow:auto}
-.modalhead{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}.modalhead h3{margin:0}
-.modalbody{padding:20px}.modalfoot{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
-.close{border:0;background:none;font-size:22px}.details{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.detail{background:var(--bg);padding:12px;border-radius:8px}.detail-label{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
-.formgroup{margin:15px 0}.formgroup label{display:block;font-weight:bold;font-size:13px;margin-bottom:6px}
-.formgroup input,.formgroup select,.formgroup textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card)}.formgroup textarea{min-height:100px}
-.toast{position:fixed;right:22px;bottom:22px;background:#172033;color:#fff;padding:13px 17px;border-radius:8px;opacity:0;transform:translateY(80px);transition:.25s;z-index:30}.toast.show{opacity:1;transform:none}
-.sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-.menu{display:none}
+
+.top{
+height:70px;
+background:var(--card);
+border-bottom:1px solid var(--border);
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 28px;
+position:sticky;
+top:0;
+z-index:5;
+}
+
+.search{
+background:var(--bg);
+border:1px solid var(--border);
+padding:10px 13px;
+border-radius:9px;
+width:320px;
+}
+
+.search input{
+border:0;
+background:none;
+outline:0;
+width:90%;
+}
+
+.actions{
+display:flex;
+align-items:center;
+gap:12px;
+}
+
+.icon{
+border:1px solid var(--border);
+background:var(--card);
+border-radius:8px;
+padding:9px;
+}
+
+.avatar{
+width:38px;
+height:38px;
+border-radius:50%;
+background:var(--p);
+color: #fff;
+display:grid;
+place-items:center;
+font-weight:bold;
+}
+
+.profile{
+display:flex;
+gap:8px;
+align-items:center;
+}
+
+.content{
+padding:28px;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:22px;
+}
+
+.ouk .header h1{
+margin:0 0 5px;
+color:var(--text)!important;
+font-size:28px;
+font-weight:700;
+line-height:1.25;
+}
+
+.muted{
+color: var(--muted);
+font-size:13px;
+}
+
+.btn{
+border:0;
+border-radius:8px;
+padding:10px 15px;
+background:var(--p);
+color: #fff!important;
+}
+
+.btn.secondary{
+background:var(--card);
+color:var(--text)!important;
+border:1px solid var(--border);
+}
+
+.btn.success{
+background:var(--green);
+}
+
+.btn.danger{
+background:var(--red);
+}
+
+.stats{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:17px;
+margin-bottom:22px;
+}
+
+.stat,.card{
+background:var(--card);
+border:1px solid var(--border);
+border-radius:13px;
+box-shadow:0 7px 22px #0f172a0b'
+}
+
+.stat{
+padding:18px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:12px;
+}
+
+.stat span{
+color:var(--muted);
+font-size:13px;
+}
+
+.stat h2{
+margin:6px 0;
+color:var(--text);
+font-size:32px;
+font-weight:700;
+line-height:1.2;
+}
+
+.staticon{
+width:48px;
+height:48px;
+border-radius:11px;
+background: #fff4df;
+color:var(--orange);
+display:grid;
+place-items:center;
+}
+
+.card{
+margin-bottom:22px;
+}
+
+.cardhead{
+padding:18px 20px;
+border-bottom:1px solid var(--border);
+display:flex;
+justify-content:space-between;
+gap:15px;
+}
+
+.cardhead h3{
+margin:0 0 4px;
+font-size:17px;
+}
+
+.tablewrap{
+overflow:auto;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+min-width:800px;
+}
+
+th{
+background:var(--bg);
+color:var(--muted);
+font-size:11px;t
+ext-align:left;
+padding:12px;
+text-transform:uppercase;
+}
+
+td{
+padding:13px;
+border-top:1px solid var(--border);
+font-size:13px;
+}
+
+.student{
+display:flex;
+gap:9px;
+align-items:center;
+}
+
+.sa{
+width:35px;
+height:35px;
+border-radius:50%;
+background: #e8eefb;
+color:var(--p);
+display:grid;
+place-items:center;
+font-weight:bold;
+}
+
+.status{
+padding:5px 9px;
+border-radius:20px;
+font-size:11px;
+font-weight:bold;
+text-transform:capitalize;
+}
+
+.s-pending{
+background: #fff4db;
+color: #a16207;
+}
+
+.s-active{
+background: #e7f8ed;
+color: #15803d;
+}
+
+.s-rejected{
+background: #feecec;
+color: #b91c1c;
+}
+
+.s-completed{
+background: #e8f1ff;
+color: #1d4ed8;
+}
+
+.action{
+border:1px solid var(--border);
+background:var(--card);
+padding:7px 10px;
+border-radius:6px;
+}
+
+.lower{
+display:grid;
+grid-template-columns:1.3fr 1fr;
+gap:22px;
+}
+
+.row{
+display:flex;
+justify-content:space-between;
+padding:14px 20px;
+border-bottom:1px solid var(--border);
+}
+
+.row:last-child{
+border:0;
+}
+
+.tabs{
+display:flex;
+gap:7px;
+overflow:auto;
+}
+
+.tab{
+padding:8px 13px;
+border:1px solid var(--border);
+background:var(--card);
+border-radius:7px;
+white-space:nowrap;
+}
+
+.tab.active{
+background:var(--p);
+color: #fff;
+}
+
+.modalbg{
+position:fixed;
+inset:0;
+background: #0f172a99;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:20px;
+z-index:20;
+}
+
+.modal{
+background:var(--card);
+width:100%;
+max-width:650px;
+border-radius:14px;
+max-height:90vh;
+overflow:auto;
+}
+
+.modalhead{
+padding:18px 20px;
+border-bottom:1px solid var(--border);
+display:flex;
+justify-content:space-between;
+}
+
+.modalhead h3{
+margin:0;
+}
+
+.modalbody{
+padding:20px;
+}
+
+.modalfoot{
+padding:16px 20px;
+border-top:1px solid var(--border);
+display:flex;
+justify-content:flex-end;
+gap:8px;
+}
+
+.close{
+border:0;
+background:none;
+font-size:22px;
+}
+
+.details{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+}
+
+.detail{
+background:var(--bg);
+padding:12px;
+border-radius:8px;
+}
+
+.detail-label{
+display:block;
+color:var(--muted);
+font-size:11px;
+margin-bottom:4px;
+}
+
+
+.formgroup{
+margin:15px 0;
+width:100%;
+display:flex;
+flex-direction:column;
+align-items:stretch;
+gap:6px;
+}
+
+.formgroup label{
+display:block;
+font-weight:bold;
+font-size:13px;
+}
+
+
+.formgroup input,.formgroup select,.formgroup textarea{
+display:block;
+align-self:stretch;
+width:100%;
+min-width:0;
+min-height:42px;
+padding:10px;
+border:1px solid var(--border);
+border-radius:8px;
+background:var(--card);
+}
+
+.formgroup small{
+display:block;
+line-height:1.4;
+}
+
+.formgroup textarea{
+min-height:100px;
+}
+
+
+.toast{
+position:fixed;
+right:22px;
+bottom:22px;
+background: #172033;
+color: #fff;
+padding:13px 17px;
+border-radius:8px;
+opacity:0;
+transform:translateY(80px);
+transition:.25s;
+z-index:30;
+}
+
+.toast.show{
+opacity:1;
+transform:none;
+}
+
+
+.sr-only{
+position:absolute;
+width:1px;
+height:1px;
+margin:-1px;
+overflow:hidden;
+clip:rect(0,0,0,0);
+white-space:nowrap;
+}
+
+.menu{
+display:none;
+}
+
 @media(max-width:1050px){.stats{grid-template-columns:repeat(2,1fr)}.lower{grid-template-columns:1fr}}
 @media(max-width:800px){.sidebar{transform:translateX(-100%);transition:.2s}.sidebar.open{transform:none}.main{margin-left:0}.menu{display:block;border:0;background:none;font-size:23px}.top{padding:0 14px}.search{width:220px}}
 @media(max-width:600px){.stats{grid-template-columns:1fr}.search{display:none}.header{flex-direction:column;align-items:flex-start;gap:12px}.details{grid-template-columns:1fr}.profile span{display:none}}
 `;
 
-const MAX = { logbook: 30, evaluation: 40, report: 30 };
-const GRADE_FIELDS = [["logbook", "Logbook"], ["evaluation", "Supervisor Evaluation"], ["report", "Final Report"]];
-const gradeInfo = (g) => {
-  const complete = GRADE_FIELDS.every(([k]) => g[k] !== null);
-  const total = GRADE_FIELDS.reduce((sum, [k]) => sum + (g[k] ?? 0), 0);
-  const letter = !complete ? "—" : total >= 70 ? "A" : total >= 60 ? "B" : total >= 50 ? "C" : total >= 40 ? "D" : "E";
-  return { complete, total, letter };
+const getResults = (data, resource) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  throw new Error(`Unexpected ${resource} response: expected a results array.`);
 };
-const departments = ["Computer Science", "Information Technology", "Business", "Science", "Education"];
+const mapPlacement = (placement) => ({
+  id: placement.id,
+  studentId: placement.student_id,
+  status: placement.status,
+  student: placement.student_name || placement.student_email || placement.student_id || "Student",
+  reg: placement.student_id || placement.student_email || "",
+  company: placement.company_name || "",
+  role: placement.role_description || "",
+  supervisor: placement.supervisor_name || "",
+  supervisorId: placement.supervisor ?? null,
+  dates: [placement.internship_start, placement.internship_end].filter(Boolean).join(" - "),
+  submitted: placement.created_at ? new Date(placement.created_at).toLocaleDateString() : "",
+});
+const mapLogbook = (entry) => ({
+  id: entry.id ?? `${entry.placement ?? "placement"}-${entry.week_number ?? entry.week ?? "week"}`,
+  student: entry.student_name || entry.student || "—",
+  week: entry.week_number ?? entry.week ?? entry.weeks_submitted ?? "—",
+  submitted: entry.submission_date || entry.submitted_at || entry.submitted || "—",
+  supervisor: entry.supervisor_name || entry.supervisor || "—",
+  status: entry.status || entry.logbook_status || "—",
+});
+const mapEvaluation = (evaluation) => ({
+  id: evaluation.id ?? evaluation.placement_id ?? `${evaluation.student_id ?? evaluation.student_name ?? "evaluation"}-${evaluation.company ?? evaluation.company_name ?? ""}`,
+  student: evaluation.student_name || evaluation.student || "—",
+  company: evaluation.company_name || evaluation.company || "—",
+  supervisor: evaluation.supervisor_name || evaluation.supervisor || "—",
+  status: evaluation.status || evaluation.evaluation_status || evaluation.overall_status || "Unknown",
+  submitted: evaluation.submitted_at || evaluation.submission_date || evaluation.created_at || "—",
+});
+const getApiErrorMessage = (error, action = "complete this request") => {
+  const status = error.response?.status;
+
+  if (error.message?.startsWith("Unexpected ")) {
+    return "The server returned information we couldn't display. Please try again later.";
+  }
+  if (status === 401) return "Your session may have expired. Please sign in again.";
+  if (status === 403) return "You don't have permission to do this.";
+  if (action === "assign the supervisor" && (status === 400 || status === 404)) {
+    return "We couldn't assign that supervisor. Check the supervisor ID and make sure the account is active.";
+  }
+  if (status === 400) return "Some information is missing or invalid. Please check the details and try again.";
+  if (status === 404) return "We couldn't find the requested record. Refresh the dashboard and try again.";
+  if (status >= 500) return "The service is temporarily unavailable. Please try again in a moment.";
+  if (!status && error.isAxiosError) return "We couldn't connect to the service. Check your connection and try again.";
+  return `We couldn't ${action}. Please try again.`;
+};
+const statusClass = (status) =>
+  ["completed", "complete", "finalised", "finalized", "reviewed"].includes(String(status).toLowerCase())
+    ? "completed"
+    : String(status).toLowerCase() === "rejected" || String(status).toLowerCase() === "overdue"
+      ? "rejected"
+      : "pending";
 const initials = (n) => n.split(" ").map((p) => p[0]).join("").slice(0, 2);
 
 function Modal({ title, onClose, children, footer }) {
@@ -101,8 +639,15 @@ export default function OukDashboard({
   initialEvaluations = [],
   initialGrades = [],
 }) {
+  const initialSupervisorsRef = useRef(initialSupervisors);
+  const refreshDataRef = useRef(null);
   const [page, setPage] = useState("dashboard");
   const [placements, setPlacements] = useState(initialPlacements);
+  const [apiErrors, setApiErrors] = useState({});
+  const [apiLoading, setApiLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastChecked, setLastChecked] = useState(null);
+  const [user, setUser] = useState({});
   const [supervisors, setSupervisors] = useState(initialSupervisors);
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
@@ -114,13 +659,102 @@ export default function OukDashboard({
   const [currentId, setCurrentId] = useState(null);
   const [assignSup, setAssignSup] = useState("");
   const [reason, setReason] = useState("");
-  const [form, setForm] = useState({ name: "", email: "", dept: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "" });
   const [grades, setGrades] = useState(initialGrades);
-  const [logs] = useState(initialLogbooks);
-  const [evals] = useState(initialEvaluations);
-  const [gradeTarget, setGradeTarget] = useState(null);
-  const [gradeForm, setGradeForm] = useState({ logbook: "", evaluation: "", report: "" });
+  const [logs, setLogs] = useState(initialLogbooks);
+  const [evals, setEvals] = useState(initialEvaluations);
   const timer = useRef();
+
+  useEffect(() => {
+    let cancelled = false;
+    let requestInFlight = false;
+    const controller = new AbortController();
+    const requestConfig = { signal: controller.signal, timeout: 15000 };
+
+    const loadResource = async (key, endpoint, update, map = (value) => value) => {
+      try {
+        const { data } = await client.get(endpoint, requestConfig);
+        const results = getResults(data, key);
+        if (!cancelled) {
+          update(results.map(map));
+          setApiErrors((errors) => ({ ...errors, [key]: "" }));
+        }
+        return true;
+      } catch (error) {
+        if (controller.signal.aborted) return false;
+        console.error(`Could not load ${key}:`, error);
+        if (!cancelled) {
+          setApiErrors((errors) => ({ ...errors, [key]: getApiErrorMessage(error, `load ${key}`) }));
+        }
+        return false;
+      }
+    };
+
+    const loadUser = async () => {
+      try {
+        const { data } = await client.get("/auth/me/", requestConfig);
+        if (!cancelled) {
+          setUser(data);
+          setApiErrors((errors) => ({ ...errors, profile: "" }));
+        }
+        return true;
+      } catch (error) {
+        if (controller.signal.aborted) return false;
+        console.error("Could not load coordinator profile:", error);
+        if (!cancelled) {
+          setApiErrors((errors) => ({ ...errors, profile: getApiErrorMessage(error, "load your profile") }));
+        }
+        return false;
+      }
+    };
+
+    const refreshData = async () => {
+      if (requestInFlight || cancelled) return;
+      requestInFlight = true;
+      setIsRefreshing(true);
+
+      try {
+        await Promise.all([
+          loadUser(),
+          loadResource("placements", "/internships/placements/all/", setPlacements, mapPlacement),
+          loadResource("logbooks", "/logbooks/overview/", setLogs, mapLogbook),
+          loadResource("evaluations", "/evaluations/review/", setEvals, mapEvaluation),
+          loadResource("grades", "/reports/performance/", setGrades),
+          loadResource("supervisors", "/reports/supervisor-workload/", setSupervisors, (supervisor) => {
+            const existing = initialSupervisorsRef.current.find((item) => item.email === supervisor.supervisor_email);
+            return {
+              id: existing?.id,
+              name: supervisor.supervisor_name || supervisor.supervisor_email || "Supervisor",
+              email: supervisor.supervisor_email || "",
+              dept: existing?.dept || "—",
+              students: supervisor.total_students ?? 0,
+              active: supervisor.active_students ?? 0,
+              pendingReviews: supervisor.pending_logbook_reviews ?? 0,
+              visits: supervisor.visits_conducted ?? 0,
+            };
+          }),
+        ]);
+      } finally {
+        requestInFlight = false;
+        if (!cancelled) {
+          setLastChecked(new Date());
+          setApiLoading(false);
+          setIsRefreshing(false);
+        }
+      }
+    };
+
+    refreshDataRef.current = refreshData;
+    refreshData();
+    const intervalId = window.setInterval(refreshData, 30000);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearInterval(intervalId);
+      refreshDataRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setModal(null);
@@ -142,64 +776,141 @@ export default function OukDashboard({
     pending: pendingList.length,
     active: placements.filter((x) => x.status === "active").length,
     rejected: placements.filter((x) => x.status === "rejected").length,
-    unassigned: placements.filter((x) => !x.supervisor && ["pending", "active"].includes(x.status)).length,
+    unassigned: placements.filter((x) => !x.supervisorId && !x.supervisor && ["pending", "active"].includes(x.status)).length,
   };
   const logStats = {
-    overdue: logs.filter((l) => l.status === "Overdue").length,
-    flagged: logs.filter((l) => l.status === "Flagged").length,
-    review: logs.filter((l) => l.status === "Pending Review").length,
+    submitted: logs.filter((l) => String(l.status).toLowerCase() === "submitted").length,
+    reviewed: logs.filter((l) => String(l.status).toLowerCase() === "reviewed").length,
+    draft: logs.filter((l) => String(l.status).toLowerCase() === "draft").length,
   };
   const current = placements.find((x) => x.id === currentId);
 
-  const openPlacement = (p) => { setCurrentId(p.id); setAssignSup(p.supervisor || ""); setModal("placement"); };
-  const approve = () => {
-    const supervisor = assignSup || current.supervisor || "";
-    setPlacements((ps) => ps.map((p) => (p.id === currentId ? { ...p, status: "active", supervisor } : p)));
-    setModal(null);
-    toast(`${current.student} approved successfully.`);
+  const openPlacement = (p) => { setCurrentId(p.id); setAssignSup(p.supervisorId ? String(p.supervisorId) : ""); setModal("placement"); };
+  const approve = async () => {
+    if (!current) return;
+    const supervisorId = assignSup.trim() ? Number(assignSup) : null;
+    if (supervisorId !== null && (!Number.isInteger(supervisorId) || supervisorId < 1)) {
+      return toast("Supervisor ID must be a positive whole number.");
+    }
+    const payload = { action: "approve" };
+    if (supervisorId !== null) payload.supervisor_id = supervisorId;
+
+    try {
+      await client.patch(`/internships/placements/${currentId}/decision/`, payload);
+      const selectedSupervisor = supervisors.find((s) => Number(s.id) === supervisorId);
+      setPlacements((ps) => ps.map((p) => (
+        p.id === currentId
+          ? {
+              ...p,
+              status: "active",
+              supervisorId: supervisorId ?? p.supervisorId,
+              supervisor: selectedSupervisor?.name || (supervisorId ? `Supervisor #${supervisorId}` : p.supervisor),
+            }
+          : p
+      )));
+      setModal(null);
+      toast(`${current.student} approved successfully.`);
+      refreshDataRef.current?.();
+    } catch (error) {
+      console.error("Could not approve placement:", error);
+      toast(getApiErrorMessage(error, "approve this placement"));
+    }
   };
   const openReject = () => { setReason(""); setModal("reject"); };
-  const reject = () => {
+  const reject = async () => {
     if (!reason.trim()) return toast("Rejection reason is required.");
-    setPlacements((ps) => ps.map((p) => (p.id === currentId ? { ...p, status: "rejected", reason: reason.trim() } : p)));
-    setModal(null);
-    toast(`${current.student} rejected. Reason recorded.`);
-  };
-  const addSupervisor = () => {
-    const name = form.name.trim(), email = form.email.trim();
-    if (!name || !email || !form.dept) return toast("Complete all fields.");
-    setSupervisors((s) => [...s, { id: email, name, email, dept: form.dept, students: 0, active: 0 }]);
-    setForm({ name: "", email: "", dept: "" });
-    setModal(null);
-    toast("Supervisor added successfully.");
-  };
-  const openGrade = (g) => {
-    setGradeTarget(g);
-    setGradeForm({ logbook: g.logbook ?? "", evaluation: g.evaluation ?? "", report: g.report ?? "" });
-    setModal("grade");
-  };
-  const saveGrade = () => {
-    const next = {};
-    for (const [k, label] of GRADE_FIELDS) {
-      const raw = String(gradeForm[k]).trim();
-      if (raw === "") { next[k] = null; continue; }
-      const n = Number(raw);
-      if (Number.isNaN(n) || n < 0 || n > MAX[k]) return toast(`${label} must be between 0 and ${MAX[k]}.`);
-      next[k] = n;
+    if (!current) return;
+
+    try {
+      await client.patch(`/internships/placements/${currentId}/decision/`, {
+        action: "reject",
+        reason: reason.trim(),
+      });
+      setPlacements((ps) => ps.map((p) => (p.id === currentId ? { ...p, status: "rejected" } : p)));
+      setModal(null);
+      toast(`${current.student} rejected. Reason recorded.`);
+      refreshDataRef.current?.();
+    } catch (error) {
+      console.error("Could not reject placement:", error);
+      toast(getApiErrorMessage(error, "reject this placement"));
     }
-    setGrades((gs) => gs.map((g) => (g.id === gradeTarget.id ? { ...g, ...next } : g)));
-    setModal(null);
-    toast(`Grades saved for ${gradeTarget.student}.`);
+  };
+  const assignSupervisor = async () => {
+    if (!current) return;
+
+    const supervisorId = Number(assignSup);
+    if (!assignSup.trim() || !Number.isInteger(supervisorId) || supervisorId < 1) {
+      return toast("Enter a valid supervisor ID (positive whole number).");
+    }
+    try {
+      await client.patch(`/internships/placements/${currentId}/assign-supervisor/`, {
+        supervisor_id: supervisorId,
+      });
+      const selectedSupervisor = supervisors.find((s) => Number(s.id) === supervisorId);
+      setPlacements((ps) => ps.map((p) => (
+        p.id === currentId
+          ? { ...p, supervisorId, supervisor: selectedSupervisor?.name || `Supervisor #${supervisorId}` }
+          : p
+      )));
+      setModal(null);
+      toast(`Supervisor assigned to ${current.student}.`);
+      refreshDataRef.current?.();
+    } catch (error) {
+      console.error("Could not assign supervisor:", error);
+      toast(getApiErrorMessage(error, "assign the supervisor"));
+    }
+  };
+  const addSupervisor = async () => {
+    const firstName = form.firstName.trim(), lastName = form.lastName.trim(), email = form.email.trim();
+    if (!firstName || !lastName || !email) return toast("Complete all fields.");
+
+    try {
+      await client.post("/auth/staff/create/", {
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role: "supervisor",
+      });
+      setSupervisors((items) => [
+        ...items,
+        { id: null, name: `${firstName} ${lastName}`, email, dept: "—", students: 0, active: 0 },
+      ]);
+      setForm({ firstName: "", lastName: "", email: "" });
+      setModal(null);
+      toast("Supervisor created successfully.");
+      refreshDataRef.current?.();
+    } catch (error) {
+      console.error("Could not create supervisor:", error);
+      toast(getApiErrorMessage(error, "create the supervisor account"));
+    }
+  };
+  const finaliseGrade = async (grade) => {
+    const matches = placements.filter((placement) =>
+      placement.studentId === grade.student_id &&
+      placement.company.toLowerCase() === String(grade.company).toLowerCase()
+    );
+    if (matches.length !== 1) {
+      return toast("Could not identify one matching placement for this grade.");
+    }
+
+    try {
+      await client.post(`/evaluations/${matches[0].id}/finalise/`);
+      toast(`Grade finalised for ${grade.student_name}.`);
+      refreshDataRef.current?.();
+    } catch (error) {
+      console.error("Could not finalise grade:", error);
+      toast(getApiErrorMessage(error, "finalise this grade"));
+    }
   };
   const manageSup = (s) =>
-    window.alert(`${s.name}\n${s.dept}\n\nStudents: ${s.students}\nActive placements: ${s.active}`);
+    window.alert(`${s.name}\n${s.email}\n\nStudents: ${s.students}\nActive placements: ${s.active}`);
 
   const navBtn = (id, label, extra) => (
     <button className={`nav ${page === id ? "active" : ""}`} type="button" onClick={() => go(id)}>
       {label} {extra}
     </button>
   );
-  const logClass = (s) => (s === "Approved" ? "active" : s === "Overdue" ? "rejected" : "pending");
+  const logClass = (status) => statusClass(status);
 
   return (
     <div className={`ouk ${dark ? "dark" : ""}`}>
@@ -231,28 +942,47 @@ export default function OukDashboard({
           </div>
           <div className="actions">
             <button className="icon" type="button" aria-label="View notifications" onClick={() => toast("You have pending approvals and logbook reviews.")}>🔔</button>
+            <button
+              className="icon"
+              type="button"
+              aria-label="Refresh dashboard data"
+              title={isRefreshing ? "Refreshing dashboard data..." : "Refresh dashboard data"}
+              disabled={isRefreshing}
+              onClick={() => refreshDataRef.current?.()}
+            >
+              {isRefreshing ? "…" : "⟳"}
+            </button>
             <button className="icon" type="button" aria-label="Toggle dark mode" onClick={() => setDark((d) => !d)}>◐</button>
             <div className="profile">
-              <div className="avatar">CO</div>
-              <span><b>Alvin Wekesa</b><br /><small className="muted">Internship Office</small></span>
+              <div className="avatar">{initials(user.full_name || user.name || "Coordinator")}</div>
+              <span><b>{user.full_name || user.name || "Coordinator"}</b><br /><small className="muted">{user.email || "Internship Office"}</small></span>
             </div>
           </div>
         </header>
 
         <div className="content">
+          {apiLoading && <div role="status" className="muted">Loading coordinator data...</div>}
+          {Object.entries(apiErrors).filter(([, error]) => error).map(([resource, error]) => (
+            <div key={resource} role="alert" className="card" style={{ padding: 16, marginBottom: 16 }}>
+              Could not load {resource}: {error}
+            </div>
+          ))}
           {page === "dashboard" && (
             <section>
               <div className="header">
                 <div>
                   <h1>Hello coordinator👋</h1>
-                  <div className="muted">Here's what's happening with student internships today.</div>
+                  <div className="muted">
+                    Here's what's happening with student internships today.
+                    {lastChecked && <> Last checked {lastChecked.toLocaleTimeString()}.</>}
+                  </div>
                 </div>
               </div>
               <div className="stats">
                 {[
                   ["Pending Approvals", stats.pending, "Requires your attention", "⏳"],
                   ["Active Placements", stats.active, "Currently on internship", "▣"],
-                  ["Rejected This Month", stats.rejected, "This month", "!"],
+                  ["Rejected Placements", stats.rejected, "All reported rejections", "!"],
                   ["No Supervisor", stats.unassigned, "Students need assignment", "♙"],
                 ].map(([label, val, sub, ic]) => (
                   <div className="stat" key={label}>
@@ -298,9 +1028,9 @@ export default function OukDashboard({
                     <div><h3>Logbook Compliance</h3><div className="muted">Students requiring attention.</div></div>
                     <button className="btn secondary" type="button" onClick={() => go("logbooks")}>View</button>
                   </div>
-                  <div className="row"><b>Overdue logbooks</b><b>{logStats.overdue}</b></div>
-                  <div className="row"><b>Flagged submissions</b><b>{logStats.flagged}</b></div>
-                  <div className="row"><b>Pending reviews</b><b>{logStats.review}</b></div>
+                  <div className="row"><b>Submitted entries</b><b>{logStats.submitted}</b></div>
+                  <div className="row"><b>Reviewed entries</b><b>{logStats.reviewed}</b></div>
+                  <div className="row"><b>Draft entries</b><b>{logStats.draft}</b></div>
                 </div>
               </div>
             </section>
@@ -312,7 +1042,7 @@ export default function OukDashboard({
               <div className="card">
                 <div className="cardhead">
                   <div className="tabs">
-                    {["all", "pending", "active", "rejected", "completed"].map((t) => (
+                    {["all", "pending", "active", "rejected", "completed", "terminated"].map((t) => (
                       <button key={t} type="button" className={`tab ${filter === t ? "active" : ""}`} onClick={() => setFilter(t)}>
                         {t[0].toUpperCase() + t.slice(1)}
                       </button>
@@ -342,10 +1072,11 @@ export default function OukDashboard({
                 <button className="btn" type="button" onClick={() => setModal("supervisor")}>+ Add Supervisor</button>
               </div>
               <div className="card">
-                <Table heads={["Name", "Department", "Email", "Students", "Active", "Action"]}>
+                <Table heads={["Name", "Department", "Email", "Students", "Active", "Pending Reviews", "Visits", "Action"]}>
                   {supervisors.filter((s) => match(s.name, s.dept, s.email)).map((s) => (
                     <tr key={s.id ?? s.email}>
                       <td><b>{s.name}</b></td><td>{s.dept}</td><td>{s.email}</td><td>{s.students}</td><td>{s.active}</td>
+                      <td>{s.pendingReviews ?? 0}</td><td>{s.visits ?? 0}</td>
                       <td><button className="action" type="button" onClick={() => manageSup(s)}>Manage</button></td>
                     </tr>
                   ))}
@@ -356,18 +1087,13 @@ export default function OukDashboard({
 
           {page === "logbooks" && (
             <section>
-              <div className="header"><div><h1>Logbook Oversight</h1><div className="muted">Monitor student logbook compliance.</div></div></div>
+              <div className="header"><div><h1>Logbook Oversight</h1><div className="muted">Monitor student logbook compliance.</div></div>              </div>
               <div className="card">
-                <Table heads={["Student", "Week", "Submitted", "Supervisor", "Status", "Action"]}>
+                <Table heads={["Student", "Week", "Submitted", "Supervisor", "Status"]}>
                   {logs.filter((x) => match(x.student, x.week, x.supervisor, x.status)).map((x) => (
                     <tr key={x.id}>
                       <td>{x.student}</td><td>{x.week}</td><td>{x.submitted || "—"}</td><td>{x.supervisor || "—"}</td>
                       <td><Status cls={logClass(x.status)}>{x.status}</Status></td>
-                      <td>
-                        {x.status === "Overdue"
-                          ? <button className="action" type="button" onClick={() => toast("Reminder sent")}>Remind</button>
-                          : <button className="action" type="button" onClick={() => toast("Logbook opened")}>View</button>}
-                      </td>
                     </tr>
                   ))}
                 </Table>
@@ -379,17 +1105,12 @@ export default function OukDashboard({
             <section>
               <div className="header"><div><h1>Evaluation Oversight</h1><div className="muted">Track internship evaluation progress.</div></div></div>
               <div className="card">
-                <Table heads={["Student", "Company", "Supervisor", "Status", "Submitted", "Action"]}>
+                <Table heads={["Student", "Company", "Supervisor", "Status", "Submitted"]}>
                   {evals.filter((x) => match(x.student, x.company, x.supervisor, x.status)).map((x) => (
                     <tr key={x.id}>
                       <td>{x.student}</td><td>{x.company}</td><td>{x.supervisor || "—"}</td>
-                      <td><Status cls={x.status === "Completed" ? "completed" : "pending"}>{x.status}</Status></td>
+                      <td><Status cls={statusClass(x.status)}>{x.status}</Status></td>
                       <td>{x.submitted || "—"}</td>
-                      <td>
-                        {x.status === "Pending"
-                          ? <button className="action" type="button" onClick={() => toast("Reminder sent")}>Remind</button>
-                          : <button className="action" type="button" onClick={() => toast("Evaluation opened")}>View</button>}
-                      </td>
                     </tr>
                   ))}
                 </Table>
@@ -399,18 +1120,27 @@ export default function OukDashboard({
 
           {page === "grades" && (
             <section>
-              <div className="header"><div><h1>Intern Grades</h1><div className="muted">Record and review final internship grades. Total is out of 100.</div></div></div>
+              <div className="header"><div><h1>Intern Grades</h1><div className="muted">Review performance scores and finalise grades.</div></div></div>
               <div className="card">
-                <Table heads={["Student", "Company", "Supervisor", "Logbook /30", "Evaluation /40", "Report /30", "Total", "Grade", "Action"]}>
-                  {grades.filter((g) => match(g.student, g.company, g.supervisor)).map((g) => {
-                    const { complete, total, letter } = gradeInfo(g);
+                <Table heads={["Student", "Company", "Supervisor", "Company Score", "Supervisor Score", "Final Score", "Grade", "Action"]}>
+                  {grades.filter((g) => match(g.student_name, g.company, g.supervisor, g.student_id)).map((g) => {
+                    const matchingPlacements = placements.filter((placement) =>
+                      placement.studentId === g.student_id &&
+                      placement.company.toLowerCase() === String(g.company).toLowerCase()
+                    );
+                    const canFinalise = !g.finalised_at && matchingPlacements.length === 1;
                     return (
-                      <tr key={g.id}>
-                        <td><b>{g.student}</b></td><td>{g.company}</td><td>{g.supervisor}</td>
-                        <td>{g.logbook ?? "—"}</td><td>{g.evaluation ?? "—"}</td><td>{g.report ?? "—"}</td>
-                        <td><b>{complete ? total : "—"}</b></td>
-                        <td><Status cls={complete ? "completed" : "pending"}>{complete ? letter : "Pending"}</Status></td>
-                        <td><button className="action" type="button" onClick={() => openGrade(g)}>{complete ? "Edit" : "Grade"}</button></td>
+                      <tr key={`${g.student_id}-${g.company}`}>
+                        <td><b>{g.student_name}</b></td><td>{g.company}</td><td>{g.supervisor || "—"}</td>
+                        <td>{g.company_score ?? "—"}</td><td>{g.supervisor_score ?? "—"}</td><td><b>{g.final_score ?? "—"}</b></td>
+                        <td><Status cls={g.finalised_at ? "completed" : "pending"}>{g.letter_grade || "Pending"}</Status></td>
+                        <td>
+                          {g.finalised_at
+                            ? <span className="muted">Finalised</span>
+                            : <button className="action" type="button" disabled={!canFinalise} onClick={() => finaliseGrade(g)}>
+                                {canFinalise ? "Finalise" : "Placement unavailable"}
+                              </button>}
+                        </td>
                       </tr>
                     );
                   })}
@@ -427,8 +1157,16 @@ export default function OukDashboard({
           onClose={() => setModal(null)}
           footer={
             <>
-              <button className="btn secondary" type="button" onClick={openReject}>Reject</button>
-              <button className="btn success" type="button" onClick={approve}>✓ Approve Placement</button>
+              {current.status === "pending" ? (
+                <>
+                  <button className="btn secondary" type="button" onClick={openReject}>Reject</button>
+                  <button className="btn success" type="button" onClick={approve}>✓ Approve Placement</button>
+                </>
+              ) : current.status === "active" ? (
+                <button className="btn success" type="button" onClick={assignSupervisor}>Save Supervisor</button>
+              ) : (
+                <button className="btn secondary" type="button" onClick={() => setModal(null)}>Close</button>
+              )}
             </>
           }
         >
@@ -438,11 +1176,29 @@ export default function OukDashboard({
             ))}
           </div>
           <div className="formgroup">
-            <label htmlFor="msup">Assign Supervisor</label>
+            <label htmlFor="msup-id">Supervisor ID</label>
+            <input
+              id="msup-id"
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              placeholder="Enter the supervisor's account ID"
+              value={assignSup}
+              onChange={(e) => setAssignSup(e.target.value)}
+            />
+            <small className="muted">Use the supervisor's numeric account ID from the admin/staff record.</small>
+          </div>
+          <div className="formgroup">
+            <label htmlFor="msup">Choose a listed supervisor (if available)</label>
             <select id="msup" value={assignSup} onChange={(e) => setAssignSup(e.target.value)}>
-              <option value="">Assign later</option>
-              {supervisors.map((s) => <option key={s.email} value={s.name}>{s.name}</option>)}
+              <option value="">{current.status === "pending" ? "Assign later" : "Select a supervisor"}</option>
+              {supervisors
+                .filter((s) => s.id != null && String(s.id).trim() !== "" && Number.isInteger(Number(s.id)))
+                .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
+            {!supervisors.some((s) => s.id != null && String(s.id).trim() !== "" && Number.isInteger(Number(s.id))) &&
+              <small className="muted">No IDs are available in the workload list. Enter the ID above to assign manually.</small>}
           </div>
         </Modal>
       )}
@@ -477,41 +1233,17 @@ export default function OukDashboard({
           }
         >
           <div className="formgroup">
-            <label htmlFor="sname">Full Name</label>
-            <input id="sname" type="text" autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <label htmlFor="sfirst">First Name</label>
+            <input id="sfirst" type="text" autoComplete="given-name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+          </div>
+          <div className="formgroup">
+            <label htmlFor="slast">Last Name</label>
+            <input id="slast" type="text" autoComplete="family-name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
           </div>
           <div className="formgroup">
             <label htmlFor="semail">Email</label>
             <input id="semail" type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
-          <div className="formgroup">
-            <label htmlFor="sdept">Department</label>
-            <select id="sdept" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })}>
-              <option value="">Select department</option>
-              {departments.map((d) => <option key={d}>{d}</option>)}
-            </select>
-          </div>
-        </Modal>
-      )}
-
-      {modal === "grade" && (
-        <Modal
-          title={`Grade ${gradeTarget.student}`}
-          onClose={() => setModal(null)}
-          footer={
-            <>
-              <button className="btn secondary" type="button" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn" type="button" onClick={saveGrade}>Save Grades</button>
-            </>
-          }
-        >
-          {GRADE_FIELDS.map(([k, label]) => (
-            <div className="formgroup" key={k}>
-              <label htmlFor={`g-${k}`}>{label} (out of {MAX[k]})</label>
-              <input id={`g-${k}`} type="number" min="0" max={MAX[k]} value={gradeForm[k]} onChange={(e) => setGradeForm({ ...gradeForm, [k]: e.target.value })} />
-            </div>
-          ))}
-          <div className="muted">Leave a field blank if it hasn't been assessed yet. A grade is assigned once all three are filled.</div>
         </Modal>
       )}
 
