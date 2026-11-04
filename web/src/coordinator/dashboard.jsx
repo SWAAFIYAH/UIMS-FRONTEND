@@ -597,7 +597,7 @@ const statusClass = (status) =>
     : String(status).toLowerCase() === "rejected" || String(status).toLowerCase() === "overdue"
       ? "rejected"
       : "pending";
-const initials = (n) => n.split(" ").map((p) => p[0]).join("").slice(0, 2);
+const initials = (name) => String(name ?? "").trim().split(/\s+/).map((part) => part[0] || "").join("").slice(0, 2);
 
 function Modal({ title, onClose, children, footer }) {
   return (
