@@ -1069,7 +1069,6 @@ export default function OukDashboard({
             <section>
               <div className="header">
                 <div><h1>Supervisor Management</h1><div className="muted">Manage supervisor assignments and workloads.</div></div>
-                <button className="btn" type="button" onClick={() => setModal("supervisor")}>+ Add Supervisor</button>
               </div>
               <div className="card">
                 <Table heads={["Name", "Department", "Email", "Students", "Active", "Pending Reviews", "Visits", "Action"]}>
