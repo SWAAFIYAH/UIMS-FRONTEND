@@ -17,29 +17,77 @@ export default function StudentDashboard() {
         program: "BSc Computer Science"
     });
 
-    // Simulate placement status: can be "none", "pending", or "active"
-    /*const [placementStatus, setPlacementStatus] = useState(() => {
-        const storedUser = JSON.parse(localStorage.getItem("user"));
-        return storedUser?.placement_status || storedUser?.placementStatus || "none";
-    }); */
-    const [placementStatus, setPlacementStatus] = useState("active");
+    // Placement status and details state
+    const [placementStatus, setPlacementStatus] = useState("none"); // "none", "pending", "active"
+    const [placementDetails, setPlacementDetails] = useState({
+        company_name: "",
+        role: "",
+        supervisor_name: "",
+        department: "",
+        start_date: "",
+        end_date: ""
+    });
 
     const navigate = useNavigate();
 
-    // Fetch live user data on mount
+    // Fetch live user data and placement details on mount
     useEffect(() => {
-        const fetchUserData = async () => {
+        const fetchDashboardData = async () => {
+            // 1. Fetch User Profile Details
             try {
-                const response = await client.get('/auth/me/');
+                const userResponse = await client.get('/auth/me/');
                 setUser(prev => ({
-                ...prev,
-                ...response.data
-            }));
+                    ...prev,
+                    ...userResponse.data
+                }));
             } catch (error) {
                 console.error("Error fetching user data:", error);
             }
+
+            // 2. Fetch Student Placement Status & Info
+            try {
+                const placementResponse = await client.get('/api/internships/placements/mine/');
+                const data = placementResponse.data;
+
+                // Check if data is empty, null, or indicates no placement
+                if (!data || data.status === 'none' || !data.placement || (Array.isArray(data) && data.length === 0)) {
+                    setPlacementStatus('none');
+                    setPlacementDetails({
+                        company_name: "",
+                        role: "",
+                        supervisor_name: "",
+                        department: "",
+                        start_date: "",
+                        end_date: ""
+                    });
+                } else {
+                    const details = data.placement || data;
+                    setPlacementDetails(details);
+                    
+                    const status = (details?.status || data.status || "").toUpperCase();
+                    if (status === 'ACTIVE' || status === 'APPROVED') {
+                        setPlacementStatus('active');
+                    } else if (status === 'PENDING' || status === 'PENDING_COORDINATOR_REVIEW') {
+                        setPlacementStatus('pending');
+                    } else {
+                        setPlacementStatus('none');
+                    }
+                }
+            } catch (error) {
+                // Safely default to 'none' on any 404 or empty response error
+                setPlacementStatus('none');
+                setPlacementDetails({
+                    company_name: "",
+                    role: "",
+                    supervisor_name: "",
+                    department: "",
+                    start_date: "",
+                    end_date: ""
+                });
+            }
         };
-        fetchUserData();
+
+        fetchDashboardData();
     }, []);
 
     const handleLogout = () => {
@@ -137,11 +185,13 @@ export default function StudentDashboard() {
                                 </div>
                                 
                                 <div className="placement-info-card full-width">
-                                    <h3>Nexora Technology</h3>
-                                    <p className="role-text" style={{ marginTop: '10px' }}><strong>Role:</strong> Software Development Intern</p>
-                                    <p className="supervisor-text" style={{ marginTop: '8px' }}><strong>Supervisor:</strong> Mr Juma</p>
-                                    <p className="supervisor-text" style={{ marginTop: '8px' }}><strong>Department:</strong> Engineering & IT</p>
-                                    <p className="date-text" style={{ marginTop: '8px' }}><strong>Duration:</strong> 10 Weeks (Sep 2026 - Nov 2026)</p>
+                                    <h3>{placementDetails?.company_name || "Company Name"}</h3>
+                                    <p className="role-text" style={{ marginTop: '10px' }}><strong>Role:</strong> {placementDetails?.role || "Internship Role"}</p>
+                                    <p className="supervisor-text" style={{ marginTop: '8px' }}><strong>Supervisor:</strong> {placementDetails?.supervisor_name || "Assigned by Coordinator"}</p>
+                                    <p className="supervisor-text" style={{ marginTop: '8px' }}><strong>Department:</strong> {placementDetails?.department || "N/A"}</p>
+                                    <p className="date-text" style={{ marginTop: '8px' }}>
+                                        <strong>Duration:</strong> {placementDetails?.start_date && placementDetails?.end_date ? `${placementDetails.start_date} - ${placementDetails.end_date}` : "10 Weeks"}
+                                    </p>
                                     
                                     {placementStatus === "pending" && (
                                         <p className="pending-note" style={{ marginTop: '15px' }}>
@@ -176,11 +226,11 @@ export default function StudentDashboard() {
                                 <div className="dash-grid-top">
                                     <div className="placement-info-card full-width">
                                         <div className="placement-header-row">
-                                            <h3>Nexora Technology</h3>
+                                            <h3>{placementDetails?.company_name || "Company Name"}</h3>
                                             <span className="status-badge pending">Pending Review</span>
                                         </div>
-                                        <p className="role-text">Software development intern</p>
-                                        <p className="supervisor-text">Supervisor: Mr Juma</p>
+                                        <p className="role-text">{placementDetails?.role || "Internship Role"}</p>
+                                        <p className="supervisor-text">Supervisor: {placementDetails?.supervisor_name || "Assigned by Coordinator"}</p>
                                         <p className="pending-note">Stats and logbook tracking will unlock once your placement details are approved by your coordinator.</p>
                                     </div>
                                 </div>
@@ -192,11 +242,11 @@ export default function StudentDashboard() {
                                     <div className="dash-grid-top">
                                         <div className="placement-info-card">
                                             <div className="placement-header-row">
-                                                <h3>Nexora Technology</h3>
+                                                <h3>{placementDetails?.company_name || "Company Name"}</h3>
                                                 <span className="active-pill">Active</span>
                                             </div>
-                                            <p className="role-text">Software development intern</p>
-                                            <p className="supervisor-text">Supervisor: Mr Juma</p>
+                                            <p className="role-text">Role: {placementDetails?.role || "Internship Role"}</p>
+                                            <p className="supervisor-text">Supervisor: {placementDetails?.supervisor_name || "Assigned by Coordinator"}</p>
                                         </div>
 
                                         <div className="progress-info-card">
@@ -255,7 +305,7 @@ export default function StudentDashboard() {
 
                     {/* Footer */}
                     <footer className="dashboard-page-footer">
-                        <p>&copy; {new Date().getFullYear()} University Information Management System (UIMS). All rights reserved.</p>
+                        <p>© {new Date().getFullYear()} University Information Management System (UIMS). All rights reserved.</p>
                         <div className="footer-links">
                             <a href="#support">Support</a>
                             <a href="#privacy">Privacy Policy</a>
