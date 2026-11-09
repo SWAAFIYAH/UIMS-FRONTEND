@@ -46,7 +46,7 @@ export default function StudentDashboard() {
 
             // 2. Fetch Student Placement Status & Info
             try {
-                const placementResponse = await client.get('/api/internships/placements/mine/');
+                const placementResponse = await client.get('/internships/placements/mine/');
                 const data = placementResponse.data;
 
                 // Check if data is empty, null, or indicates no placement
