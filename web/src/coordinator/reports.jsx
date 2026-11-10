@@ -35,55 +35,393 @@ const STATUSES = ["Ready", "Processing", "Failed"];
 const typeLabel = (v) => REPORT_TYPES.find((t) => t.value === v)?.label ?? v;
 
 const css = `
-.rp{--p:#0b3d91;--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--border:#e5e7eb;--red:#dc2626;--green:#16a34a;
-  font-family:Segoe UI,Arial,sans-serif;color:var(--text)}
-.rp.dark{--bg:#0f172a;--card:#1e293b;--text:#e5e7eb;--muted:#94a3b8;--border:#334155}
-.rp *{box-sizing:border-box}
-.rp button,.rp input,.rp select{font:inherit;color:inherit}.rp button{cursor:pointer}
-.rp button:disabled{opacity:.55;cursor:not-allowed}
-.rp-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
-.rp-header h1{margin:0 0 5px;font-size:25px}
-.rp-muted{color:var(--muted);font-size:13px}
-.rp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:17px;margin-bottom:22px}
-.rp-stat,.rp-card{background:var(--card);border:1px solid var(--border);border-radius:13px;box-shadow:0 7px 22px #0f172a0b}
-.rp-stat{padding:18px}.rp-stat span{color:var(--muted);font-size:13px}.rp-stat h2{margin:6px 0 0;font-size:28px}
-.rp-card{margin-bottom:22px}
-.rp-cardhead{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
-.rp-tabs{display:flex;gap:7px;overflow:auto}
-.rp-tab{padding:8px 13px;border:1px solid var(--border);background:var(--card);border-radius:7px;white-space:nowrap}
-.rp-tab.active{background:var(--p);color:#fff;border-color:var(--p)}
-.rp-search{background:var(--bg);border:1px solid var(--border);padding:9px 13px;border-radius:9px;width:280px;max-width:100%}
-.rp-search input{border:0;background:none;outline:0;width:100%}
-.rp-tablewrap{overflow:auto}
-.rp table{width:100%;border-collapse:collapse;min-width:800px}
-.rp th{background:var(--bg);color:var(--muted);font-size:11px;text-align:left;padding:12px;text-transform:uppercase}
-.rp td{padding:13px;border-top:1px solid var(--border);font-size:13px}
-.rp-status{padding:5px 9px;border-radius:20px;font-size:11px;font-weight:bold;text-transform:capitalize;white-space:nowrap}
-.rp-s-pending{background:#fff4db;color:#a16207}.rp-s-active{background:#e7f8ed;color:#15803d}.rp-s-rejected{background:#feecec;color:#b91c1c}
-.rp-action{border:1px solid var(--border);background:var(--card);padding:7px 10px;border-radius:6px}
-.rp-actions{display:flex;align-items:center;gap:10px}
-.rp-icon{border:1px solid var(--border);background:var(--card);border-radius:8px;padding:9px 11px}
-.rp-btn{border:0;border-radius:8px;padding:10px 15px;background:var(--p);color:#fff!important}
-.rp-btn.secondary{background:var(--card);color:var(--text)!important;border:1px solid var(--border)}
-.rp-state{text-align:center;padding:32px!important;color:var(--muted)}
-.rp-error{color:var(--red)}
-.rp-modalbg{position:fixed;inset:0;background:#0f172a99;display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}
-.rp-modal{background:var(--card);width:100%;max-width:650px;border-radius:14px;max-height:90vh;overflow:auto}
-.rp-modalhead{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.rp-modalhead h3{margin:0}
-.rp-modalbody{padding:20px}
-.rp-modalfoot{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
-.rp-close{border:0;background:none;font-size:22px}
-.rp-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.rp-formgroup{margin:15px 0}.rp-formgroup label{display:block;font-weight:bold;font-size:13px;margin-bottom:6px}
-.rp-formgroup input,.rp-formgroup select{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card)}
-.rp-toast{position:fixed;right:22px;bottom:22px;background:#172033;color:#fff;padding:13px 17px;border-radius:8px;
-  opacity:0;transform:translateY(80px);transition:.25s;z-index:30;pointer-events:none}
-.rp-toast.show{opacity:1;transform:none}
-.rp-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-@media(max-width:700px){.rp-stats{grid-template-columns:1fr}.rp-search{width:100%}.rp-row2{grid-template-columns:1fr}}
-`;
+.rp {
+  --p: #0b3d91;
+  --bg: #f5f7fb;
+  --card: #fff;
+  --text: #172033;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --green: #16a34a;
+  --red: #dc2626;
+  --orange: #d97706;
+  font-family: Segoe UI, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
 
+.rp.dark {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --border: #334155;
+}
+
+.rp * {
+  box-sizing: border-box;
+}
+
+.rp button,
+.rp input,
+.rp select {
+  font: inherit;
+  color: inherit;
+}
+
+.rp button {
+  cursor: pointer;
+}
+
+.rp button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.rp-header h1 {
+  margin: 0 0 5px;
+  font-size: 25px;
+}
+
+.rp-muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 17px;
+  margin-bottom: 22px;
+}
+
+.rp-stat,
+.rp-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  box-shadow: 0 7px 22px #0f172a0b;
+}
+
+.rp-stat {
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.rp-stat span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rp-stat h2 {
+  margin: 6px 0 0;
+  font-size: 28px;
+}
+
+.rp-staticon {
+  width: 48px;
+  height: 48px;
+  border-radius: 11px;
+  background: #fff4df;
+  color: var(--orange);
+  display: grid;
+  place-items: center;
+}
+
+.rp-card {
+  margin-bottom: 22px;
+}
+
+.rp-cardhead {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.rp-tabs {
+  display: flex;
+  gap: 7px;
+  overflow: auto;
+}
+
+.rp-tab {
+  padding: 8px 13px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.rp-tab.active {
+  background: var(--p);
+  color: #fff;
+  border-color: var(--p);
+}
+
+.rp-search {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 10px 13px;
+  border-radius: 9px;
+  width: 280px;
+  max-width: 100%;
+}
+
+.rp-search input {
+  border: 0;
+  background: none;
+  outline: 0;
+  width: 100%;
+}
+
+.rp-tablewrap {
+  overflow: auto;
+}
+
+.rp table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.rp th {
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 11px;
+  text-align: left;
+  padding: 12px;
+  text-transform: uppercase;
+}
+
+.rp td {
+  padding: 13px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.rp-status {
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.rp-s-pending {
+  background: #fff4db;
+  color: #a16207;
+}
+
+.rp-s-active {
+  background: #e7f8ed;
+  color: #15803d;
+}
+
+.rp-s-rejected {
+  background: #feecec;
+  color: #b91c1c;
+}
+
+.rp-s-completed {
+  background: #e8f1ff;
+  color: #1d4ed8;
+}
+
+.rp-action {
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 7px 10px;
+  border-radius: 6px;
+}
+
+.rp-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rp-icon {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+
+.rp-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 15px;
+  background: var(--p);
+  color: #fff !important;
+}
+
+.rp-btn.secondary {
+  background: var(--card);
+  color: var(--text) !important;
+  border: 1px solid var(--border);
+}
+
+.rp-btn.success {
+  background: var(--green);
+}
+
+.rp-btn.danger {
+  background: var(--red);
+}
+
+.rp-state {
+  text-align: center;
+  padding: 32px !important;
+  color: var(--muted);
+}
+
+.rp-error {
+  color: var(--red);
+}
+
+.rp-modalbg {
+  position: fixed;
+  inset: 0;
+  background: #0f172a99;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 20;
+}
+
+.rp-modal {
+  background: var(--card);
+  width: 100%;
+  max-width: 650px;
+  border-radius: 14px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.rp-modalhead {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rp-modalhead h3 {
+  margin: 0;
+}
+
+.rp-modalbody {
+  padding: 20px;
+}
+
+.rp-modalfoot {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.rp-close {
+  border: 0;
+  background: none;
+  font-size: 22px;
+}
+
+.rp-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.rp-formgroup {
+  margin: 15px 0;
+}
+
+.rp-formgroup label {
+  display: block;
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.rp-formgroup input,
+.rp-formgroup select,
+.rp-formgroup textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.rp-formgroup textarea {
+  min-height: 100px;
+}
+
+.rp-toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  background: #172033;
+  color: #fff;
+  padding: 13px 17px;
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(80px);
+  transition: 0.25s;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.rp-toast.show {
+  opacity: 1;
+  transform: none;
+}
+
+.rp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .rp-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .rp-search {
+    width: 100%;
+  }
+
+  .rp-row2 {
+    grid-template-columns: 1fr;
+  }
+}
+`;
 const statusClass = (s) => (s === "Ready" ? "active" : s === "Failed" ? "rejected" : "pending");
 const emptyForm = { type: "", format: "PDF", from: "", to: "" };
 

@@ -1,20 +1,119 @@
 import { useState, useRef, Children } from "react";
 
 const css = `
-:root{--p:#0b3d91;--nav:#0b2454;--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--border:#e5e7eb;--green:#16a34a;--red:#dc2626;--orange:#d97706}
-.ouk.dark{--bg:#0f172a;--card:#1e293b;--text:#e5e7eb;--muted:#94a3b8;--border:#334155}
-.ouk *{box-sizing:border-box}.ouk{font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+:root{
+--p: #0b3d91;
+--nav: #0b2454;
+--bg: #f5f7fb;
+--card: #fff;
+--text: #172033;
+--muted: #6b7280;
+--border: #e5e7eb;
+--green: #16a34a;
+--red: #dc2626;
+--orange: #d97706;
+}
+
+.ouk.dark{
+--bg: #0f172a;
+--card: #1e293b;
+--text: #e5e7eb;
+--muted: #94a3b8;
+--border: #334155;
+}
+
+.ouk *{box-sizing:border-box}
+
+.ouk{
+font-family:Segoe UI,Arial,sans-serif;
+background:var(--bg);
+color:var(--text);
+min-height:100vh;
+}
+
 .ouk button{font:inherit;color:inherit;cursor:pointer}
-.content{padding:28px}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.header h1{margin:0 0 5px;font-size:25px}
+
+.content{padding:28px}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:22px;
+}
+
+.header h1{margin:0 0 5px;font-size:25px}
+
 .muted{color:var(--muted);font-size:13px}
-.icon{border:1px solid var(--border);background:var(--card);border-radius:8px;padding:9px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:13px;box-shadow:0 7px 22px #0f172a0b;margin-bottom:22px}
-.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:800px}
-th{background:var(--bg);color:var(--muted);font-size:11px;text-align:left;padding:12px;text-transform:uppercase}td{padding:13px;border-top:1px solid var(--border);font-size:13px}
-.status{padding:5px 9px;border-radius:20px;font-size:11px;font-weight:bold;text-transform:capitalize}
-.s-pending{background:#fff4db;color:#a16207}.s-active{background:#e7f8ed;color:#15803d}.s-rejected{background:#feecec;color:#b91c1c}
-.action{border:1px solid var(--border);background:var(--card);padding:7px 10px;border-radius:6px}
-.toast{position:fixed;right:22px;bottom:22px;background:#172033;color:#fff;padding:13px 17px;border-radius:8px;opacity:0;transform:translateY(80px);transition:.25s;z-index:30}.toast.show{opacity:1;transform:none}
+
+.icon{
+border:1px solid var(--border);
+background:var(--card);
+border-radius:8px;
+padding:9px;
+}
+
+.card{
+background:var(--card);
+border:1px solid var(--border);
+border-radius:13px;
+box-shadow:0 7px 22px #0f172a0b;
+margin-bottom:22px;
+}
+
+.tablewrap{overflow:auto}
+
+table{width:100%;border-collapse:collapse;min-width:800px}
+
+th{
+background:var(--bg);
+color:var(--muted);
+font-size:11px;
+text-align:left;
+padding:12px;
+text-transform:uppercase;
+}
+
+td{
+padding:13px;
+border-top:1px solid var(--border);
+font-size:13px;
+}
+
+.status{
+padding:5px 9px;
+border-radius:20px;
+font-size:11px;
+font-weight:bold;
+text-transform:capitalize;
+}
+
+.s-pending{background: #fff4db;color: #a16207}
+.s-active{background: #e7f8ed;color: #15803d}
+.s-rejected{background: #feecec;color: #b91c1c}
+
+.action{
+border:1px solid var(--border);
+background:var(--card);
+padding:7px 10px;
+border-radius:6px;
+}
+
+.toast{
+position:fixed;
+right:22px;
+bottom:22px;
+background: #172033;
+color: #fff;
+padding:13px 17px;
+border-radius:8px;
+opacity:0;
+transform:translateY(80px);
+transition:.25s;
+z-index:30;
+}
+
+.toast.show{opacity:1;transform:none}
 @media(max-width:600px){.header{flex-direction:column;align-items:flex-start;gap:12px}}
 `;
 

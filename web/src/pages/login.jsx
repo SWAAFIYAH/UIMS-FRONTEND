@@ -1,5 +1,4 @@
 import { useState } from "react";
-import React from "react";
 import { toast } from "react-toastify";
 import './login.css';
 import { Link, useNavigate } from 'react-router-dom'; 
@@ -26,12 +25,9 @@ export default function Login(){
 
         try {
             const response = await login(email, password);
-            console.log("FULL LOGIN RESPONSE:", response); // <--- Look at this in your F12 Console!
-            
             toast.success('Successfully logged in!');
 
            if (response && response.user) {
-                console.log("USER ROLE:", response.user.role);
                 localStorage.setItem('userName', response.user.name)
                 if (response.user.role === "student") {
                     navigate("/student-dashboard");
@@ -49,13 +45,18 @@ export default function Login(){
                     toast.error("invalid role");
                 }
             } else {
-                console.log("Could not find user object in response structure.");
+                setError("Login succeeded, but the server did not return a user profile.");
+                toast.error("Login succeeded, but no user profile was returned.");
             }
 
         } catch (err) {
             console.error("LOGIN ERROR:", err);
-            toast.error("Invalid email or password");
-            setError("Invalid email or password");
+            const message = err.response?.data?.detail
+                || (err.isAxiosError && !err.response
+                    ? "Could not connect to the backend. Check your connection and try again."
+                    : err.message || "Invalid email or password");
+            toast.error(message);
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -75,6 +76,8 @@ export default function Login(){
                 <div className="logintextdiv">
                     <p className="login-tittle">LOGIN</p>
                 </div>
+
+                {error && <div role="alert" className="error-banner">{error}</div>}
 
                 {/* Wrapped inside a form element */}
                 <form onSubmit={handleLoginSubmit} className="loginform">

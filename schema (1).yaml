@@ -1,0 +1,1926 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+paths:
+  /api/auth/invite/accept/:
+    post:
+      operationId: auth_invite_accept_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptInvite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AcceptInvite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcceptInvite'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/invite/check/:
+    get:
+      operationId: auth_invite_check_retrieve
+      parameters:
+      - in: query
+        name: token
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: admin@example.com
+                password:
+                  type: string
+                  example: yourpassword
+              required:
+              - email
+              - password
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+          description: ''
+  /api/auth/register/student/:
+    post:
+      operationId: auth_register_student_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentRegister'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentRegister'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentRegister'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/resend-verification/:
+    post:
+      operationId: auth_resend_verification_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/staff/create/:
+    post:
+      operationId: auth_staff_create_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaff'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateStaff'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateStaff'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/staff/resend-invite/:
+    post:
+      operationId: auth_staff_resend_invite_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendInviteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResendInviteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResendInviteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/auth/verify-email/:
+    post:
+      operationId: auth_verify_email_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/evaluations/{placement_id}/finalise/:
+    post:
+      operationId: evaluations_finalise_create
+      description: |-
+        POST /api/evaluations/<placement_id>/finalise/
+        Coordinator computes and finalises the grade for a placement.
+        Weighting: 60% company + 40% supervisor.
+      parameters:
+      - in: path
+        name: placement_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - evaluations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/evaluations/company/:
+    get:
+      operationId: evaluations_company_retrieve
+      description: |-
+        POST /api/evaluations/company/
+        Supervisor or coordinator enters the employer's evaluation, based on a
+        physical or scanned evaluation sheet collected during a field visit.
+
+        GET /api/evaluations/company/
+        View evaluations you have entered.
+      tags:
+      - evaluations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: evaluations_company_create
+      description: |-
+        POST /api/evaluations/company/
+        Supervisor or coordinator enters the employer's evaluation, based on a
+        physical or scanned evaluation sheet collected during a field visit.
+
+        GET /api/evaluations/company/
+        View evaluations you have entered.
+      tags:
+      - evaluations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/evaluations/my-results/:
+    get:
+      operationId: evaluations_my_results_retrieve
+      description: |-
+        GET /api/evaluations/my-results/
+        Student views their own evaluation results and final grade.
+      tags:
+      - evaluations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/evaluations/review/:
+    get:
+      operationId: evaluations_review_retrieve
+      description: |-
+        GET /api/evaluations/review/
+        Coordinator sees all placements with their evaluation status.
+      tags:
+      - evaluations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/evaluations/supervisor/:
+    get:
+      operationId: evaluations_supervisor_retrieve
+      description: |-
+        POST /api/evaluations/supervisor/
+        Supervisor submits assessment for an assigned student.
+
+        GET /api/evaluations/supervisor/
+        Supervisor views all assessments they have submitted.
+      tags:
+      - evaluations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: evaluations_supervisor_create
+      description: |-
+        POST /api/evaluations/supervisor/
+        Supervisor submits assessment for an assigned student.
+
+        GET /api/evaluations/supervisor/
+        Supervisor views all assessments they have submitted.
+      tags:
+      - evaluations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/internships/placements/:
+    post:
+      operationId: internships_placements_create
+      description: |-
+        POST /api/internships/placements/
+        Student submits their self-secured placement for approval.
+      tags:
+      - internships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlacementSubmit'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlacementSubmit'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlacementSubmit'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/internships/placements/{placement_id}/assign-supervisor/:
+    patch:
+      operationId: internships_placements_assign_supervisor_partial_update
+      description: |-
+        PATCH /api/internships/placements/<id>/assign-supervisor/
+        Coordinator assigns or reassigns a supervisor to an approved placement.
+      parameters:
+      - in: path
+        name: placement_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - internships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignSupervisorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignSupervisorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignSupervisorRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/internships/placements/{placement_id}/decision/:
+    patch:
+      operationId: internships_placements_decision_partial_update
+      description: |-
+        PATCH /api/internships/placements/<id>/decision/
+        Coordinator approves or rejects a submitted placement.
+      parameters:
+      - in: path
+        name: placement_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - internships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlacementDecision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlacementDecision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlacementDecision'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/internships/placements/all/:
+    get:
+      operationId: internships_placements_all_retrieve
+      description: |-
+        GET /api/internships/placements/all/
+        Coordinator views all placements. Can filter by status.
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          minLength: 1
+      tags:
+      - internships
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorPlacementsResponse'
+          description: ''
+  /api/internships/placements/mine/:
+    get:
+      operationId: internships_placements_mine_retrieve
+      description: |-
+        GET /api/internships/placements/mine/
+        Student views their own placement and tracks its status.
+        Always returns 200: status is 'none' if no placement has been submitted.
+      tags:
+      - internships
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Placement'
+          description: ''
+  /api/logbooks/:
+    post:
+      operationId: logbooks_create
+      description: |-
+        POST /api/logbooks/
+        Student submits a weekly logbook entry.
+      tags:
+      - logbooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLogbookEntry'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateLogbookEntry'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateLogbookEntry'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/logbooks/{entry_id}/:
+    get:
+      operationId: logbooks_retrieve
+      description: |-
+        GET /api/logbooks/<id>/
+        View a single logbook entry with its feedback.
+        Students can only view their own. Supervisors can view assigned students.
+      parameters:
+      - in: path
+        name: entry_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - logbooks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogbookEntry'
+          description: ''
+  /api/logbooks/{entry_id}/feedback/:
+    post:
+      operationId: logbooks_feedback_create
+      description: |-
+        POST /api/logbooks/<entry_id>/feedback/
+        Supervisor adds feedback to a logbook entry.
+        Automatically marks the entry as reviewed.
+      parameters:
+      - in: path
+        name: entry_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - logbooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFeedback'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateFeedback'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateFeedback'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/logbooks/{entry_id}/feedback/update/:
+    patch:
+      operationId: logbooks_feedback_update_partial_update
+      description: |-
+        PATCH /api/logbooks/<entry_id>/feedback/update/
+        Supervisor updates existing feedback on a logbook entry.
+      parameters:
+      - in: path
+        name: entry_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - logbooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateFeedbackRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateFeedbackRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateFeedbackRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/logbooks/mine/:
+    get:
+      operationId: logbooks_mine_retrieve
+      description: |-
+        GET /api/logbooks/mine/
+        Student views all their own logbook entries with feedback.
+        Can filter by placement using ?placement=<id>
+      parameters:
+      - in: query
+        name: placement
+        schema:
+          type: integer
+        description: Filter by placement ID
+      tags:
+      - logbooks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyLogbookResponse'
+          description: ''
+  /api/logbooks/overview/:
+    get:
+      operationId: logbooks_overview_retrieve
+      description: |-
+        GET /api/logbooks/overview/
+        Coordinator sees logbook submission stats across all active placements.
+      tags:
+      - logbooks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorOverviewResponse'
+          description: ''
+  /api/logbooks/students/:
+    get:
+      operationId: logbooks_students_retrieve
+      description: |-
+        GET /api/logbooks/students/
+        Supervisor views all their assigned students with placement info.
+      tags:
+      - logbooks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupervisedStudentsResponse'
+          description: ''
+  /api/logbooks/students/{placement_id}/entries/:
+    get:
+      operationId: logbooks_students_entries_retrieve
+      description: |-
+        GET /api/logbooks/students/<placement_id>/entries/
+        Supervisor views all logbook entries for a specific student placement.
+      parameters:
+      - in: path
+        name: placement_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - logbooks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentLogbookEntriesResponse'
+          description: ''
+  /api/logbooks/visits/:
+    get:
+      operationId: logbooks_visits_retrieve
+      description: |-
+        POST /api/logbooks/visits/
+        Supervisor logs a field visit to a student.
+        GET  /api/logbooks/visits/
+        Supervisor views all their logged visits.
+      tags:
+      - logbooks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupervisorVisitsGetResponse'
+          description: ''
+    post:
+      operationId: logbooks_visits_create
+      description: |-
+        POST /api/logbooks/visits/
+        Supervisor logs a field visit to a student.
+        GET  /api/logbooks/visits/
+        Supervisor views all their logged visits.
+      tags:
+      - logbooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVisit'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateVisit'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateVisit'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/reports/analytics/:
+    get:
+      operationId: reports_analytics_retrieve
+      description: |-
+        GET /api/reports/analytics/
+        Institution-wide analytics for management.
+        Admin and coordinator only.
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAnalyticsResponse'
+          description: ''
+  /api/reports/departmental/:
+    get:
+      operationId: reports_departmental_retrieve
+      description: |-
+        GET /api/reports/departmental/
+        Breakdown of internships by department and program.
+        Coordinator and admin only.
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentalReportResponse'
+          description: ''
+  /api/reports/my-workload/:
+    get:
+      operationId: reports_my_workload_retrieve
+      description: |-
+        GET /api/reports/my-workload/
+        Supervisor views their own workload summary.
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupervisorPersonalReportResponse'
+          description: ''
+  /api/reports/performance/:
+    get:
+      operationId: reports_performance_retrieve
+      description: |-
+        GET /api/reports/performance/
+        Student performance summary — grades, scores, logbook completion.
+        Coordinator and admin only.
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceReportResponse'
+          description: ''
+  /api/reports/placements/:
+    get:
+      operationId: reports_placements_retrieve
+      description: |-
+        GET /api/reports/placements/
+        Full list of all placements — pending, active, completed, rejected.
+        Coordinator and admin only.
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Filter placements by status (e.g., active, completed)
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlacementReportResponse'
+          description: ''
+  /api/reports/supervisor-workload/:
+    get:
+      operationId: reports_supervisor_workload_retrieve
+      description: |-
+        GET /api/reports/supervisor-workload/
+        How many students each supervisor is handling.
+        Coordinator and admin only.
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupervisorWorkloadReportResponse'
+          description: ''
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - ht
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    AcceptInvite:
+      type: object
+      properties:
+        token:
+          type: string
+          format: uuid
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        password2:
+          type: string
+          writeOnly: true
+      required:
+      - password
+      - password2
+      - token
+    ActionEnum:
+      enum:
+      - approve
+      - reject
+      type: string
+      description: |-
+        * `approve` - approve
+        * `reject` - reject
+    AdminAnalyticsResponse:
+      type: object
+      properties:
+        users:
+          $ref: '#/components/schemas/AnalyticsUsers'
+        placements:
+          $ref: '#/components/schemas/AnalyticsPlacements'
+        logbooks:
+          $ref: '#/components/schemas/AnalyticsLogbooks'
+        grades:
+          $ref: '#/components/schemas/AnalyticsGrades'
+        top_companies:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopCompanyItem'
+      required:
+      - grades
+      - logbooks
+      - placements
+      - top_companies
+      - users
+    AnalyticsGrades:
+      type: object
+      properties:
+        total_graded:
+          type: integer
+        grade_distribution:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - grade_distribution
+      - total_graded
+    AnalyticsLogbooks:
+      type: object
+      properties:
+        total:
+          type: integer
+        pending_review:
+          type: integer
+        reviewed:
+          type: integer
+      required:
+      - pending_review
+      - reviewed
+      - total
+    AnalyticsPlacements:
+      type: object
+      properties:
+        total:
+          type: integer
+        pending:
+          type: integer
+        active:
+          type: integer
+        completed:
+          type: integer
+        rejected:
+          type: integer
+      required:
+      - active
+      - completed
+      - pending
+      - rejected
+      - total
+    AnalyticsUsers:
+      type: object
+      properties:
+        students:
+          type: integer
+        supervisors:
+          type: integer
+        coordinators:
+          type: integer
+      required:
+      - coordinators
+      - students
+      - supervisors
+    CoordinatorOverviewResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - count
+      - results
+    CoordinatorPlacementsResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Placement'
+      required:
+      - count
+      - results
+    CreateFeedback:
+      type: object
+      properties:
+        comment:
+          type: string
+      required:
+      - comment
+    CreateLogbookEntry:
+      type: object
+      properties:
+        placement:
+          type: integer
+        week_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        content:
+          type: string
+      required:
+      - content
+      - placement
+      - week_number
+    CreateStaff:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        role:
+          $ref: '#/components/schemas/CreateStaffRoleEnum'
+      required:
+      - email
+      - first_name
+      - last_name
+      - role
+    CreateStaffRoleEnum:
+      enum:
+      - coordinator
+      - supervisor
+      type: string
+      description: |-
+        * `coordinator` - coordinator
+        * `supervisor` - supervisor
+    CreateVisit:
+      type: object
+      properties:
+        placement:
+          type: integer
+        visit_date:
+          type: string
+          format: date
+        notes:
+          type: string
+        outcome:
+          $ref: '#/components/schemas/OutcomeEnum'
+      required:
+      - placement
+      - visit_date
+    DepartmentReportItem:
+      type: object
+      properties:
+        department:
+          type: string
+        total:
+          type: integer
+        active:
+          type: integer
+        completed:
+          type: integer
+        programs:
+          type: object
+          additionalProperties:
+            type: integer
+        companies:
+          type: array
+          items:
+            type: string
+      required:
+      - active
+      - companies
+      - completed
+      - department
+      - programs
+      - total
+    DepartmentalReportResponse:
+      type: object
+      properties:
+        total_departments:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DepartmentReportItem'
+      required:
+      - results
+      - total_departments
+    LogbookEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        placement:
+          type: integer
+        week_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        content:
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LogbookEntryStatusEnum'
+          readOnly: true
+        submission_date:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        student_name:
+          type: string
+          readOnly: true
+        company_name:
+          type: string
+          readOnly: true
+        has_feedback:
+          type: string
+          readOnly: true
+        feedback:
+          type: string
+          readOnly: true
+      required:
+      - company_name
+      - content
+      - feedback
+      - has_feedback
+      - id
+      - placement
+      - status
+      - student_name
+      - submission_date
+      - updated_at
+      - week_number
+    LogbookEntryStatusEnum:
+      enum:
+      - draft
+      - submitted
+      - reviewed
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `submitted` - Submitted
+        * `reviewed` - Reviewed
+    LogoutRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          description: Refresh token to blacklist
+      required:
+      - refresh
+    MyLogbookResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LogbookEntry'
+      required:
+      - count
+      - results
+    OutcomeEnum:
+      enum:
+      - satisfactory
+      - needs_improvement
+      - excellent
+      type: string
+      description: |-
+        * `satisfactory` - Satisfactory
+        * `needs_improvement` - Needs Improvement
+        * `excellent` - Excellent
+    PatchedAssignSupervisorRequest:
+      type: object
+      properties:
+        supervisor_id:
+          type: integer
+    PatchedPlacementDecision:
+      type: object
+      description: Used by a coordinator to approve or reject a submitted placement.
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        reason:
+          type: string
+        supervisor_id:
+          type: integer
+    PatchedUpdateFeedbackRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          description: Updated feedback comment
+    PerformanceReportItem:
+      type: object
+      properties:
+        student_name:
+          type: string
+        student_id:
+          type: string
+        program:
+          type: string
+        department:
+          type: string
+        company:
+          type: string
+        supervisor:
+          type: string
+        company_score:
+          type: number
+          format: double
+        supervisor_score:
+          type: number
+          format: double
+        final_score:
+          type: number
+          format: double
+        letter_grade:
+          type: string
+        coordinator_remarks:
+          type: string
+        logbooks_submitted:
+          type: integer
+        logbooks_reviewed:
+          type: integer
+        visits_received:
+          type: integer
+        finalised_at:
+          type: string
+          format: date-time
+      required:
+      - company
+      - company_score
+      - coordinator_remarks
+      - department
+      - final_score
+      - finalised_at
+      - letter_grade
+      - logbooks_reviewed
+      - logbooks_submitted
+      - program
+      - student_id
+      - student_name
+      - supervisor
+      - supervisor_score
+      - visits_received
+    PerformanceReportResponse:
+      type: object
+      properties:
+        summary:
+          $ref: '#/components/schemas/PerformanceSummary'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PerformanceReportItem'
+      required:
+      - results
+      - summary
+    PerformanceSummary:
+      type: object
+      properties:
+        total_graded:
+          type: integer
+        average_score:
+          type: number
+          format: double
+        highest_score:
+          type: number
+          format: double
+        lowest_score:
+          type: number
+          format: double
+        grade_distribution:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - total_graded
+    Placement:
+      type: object
+      description: Used when viewing placements — students, supervisors, coordinators.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlacementStatusEnum'
+          readOnly: true
+        student_name:
+          type: string
+          readOnly: true
+        student_email:
+          type: string
+          readOnly: true
+        student_id:
+          type: string
+          readOnly: true
+        company_name:
+          type: string
+          maxLength: 200
+        company_location:
+          type: string
+          maxLength: 200
+        company_supervisor_name:
+          type: string
+          maxLength: 200
+        company_supervisor_contact:
+          type: string
+          maxLength: 100
+        role_description:
+          type: string
+        internship_start:
+          type: string
+          format: date
+        internship_end:
+          type: string
+          format: date
+        supervisor:
+          type: integer
+          readOnly: true
+          nullable: true
+        supervisor_name:
+          type: string
+          readOnly: true
+        supervisor_email:
+          type: string
+          readOnly: true
+        coordinator:
+          type: integer
+          readOnly: true
+          nullable: true
+        coordinator_name:
+          type: string
+          readOnly: true
+        rejection_reason:
+          type: string
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - company_location
+      - company_name
+      - company_supervisor_contact
+      - company_supervisor_name
+      - coordinator
+      - coordinator_name
+      - created_at
+      - id
+      - internship_end
+      - internship_start
+      - rejection_reason
+      - reviewed_at
+      - status
+      - student_email
+      - student_id
+      - student_name
+      - supervisor
+      - supervisor_email
+      - supervisor_name
+      - updated_at
+    PlacementFilters:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    PlacementReportItem:
+      type: object
+      properties:
+        placement_id:
+          type: integer
+        status:
+          type: string
+        student_name:
+          type: string
+        student_email:
+          type: string
+        student_id:
+          type: string
+        program:
+          type: string
+        department:
+          type: string
+        year_of_study:
+          type: integer
+        company:
+          type: string
+        company_location:
+          type: string
+        internship_start:
+          type: string
+          format: date
+        internship_end:
+          type: string
+          format: date
+        supervisor:
+          type: string
+        logbooks_submitted:
+          type: integer
+        logbooks_reviewed:
+          type: integer
+        visits_count:
+          type: integer
+        final_grade:
+          type: string
+        final_score:
+          type: number
+          format: double
+          nullable: true
+        placed_on:
+          type: string
+          format: date-time
+      required:
+      - company
+      - company_location
+      - department
+      - final_grade
+      - final_score
+      - internship_end
+      - internship_start
+      - logbooks_reviewed
+      - logbooks_submitted
+      - placed_on
+      - placement_id
+      - program
+      - status
+      - student_email
+      - student_id
+      - student_name
+      - supervisor
+      - visits_count
+      - year_of_study
+    PlacementReportResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        filters:
+          $ref: '#/components/schemas/PlacementFilters'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlacementReportItem'
+      required:
+      - filters
+      - results
+      - total
+    PlacementStatusEnum:
+      enum:
+      - pending
+      - active
+      - rejected
+      - completed
+      - terminated
+      type: string
+      description: |-
+        * `pending` - Pending Approval
+        * `active` - Active
+        * `rejected` - Rejected
+        * `completed` - Completed
+        * `terminated` - Terminated
+    PlacementSubmit:
+      type: object
+      description: |-
+        Student submits their self-secured placement details.
+        student is NOT here — set server-side from request.user.
+      properties:
+        company_name:
+          type: string
+          maxLength: 200
+        company_location:
+          type: string
+          maxLength: 200
+        company_supervisor_name:
+          type: string
+          maxLength: 200
+        company_supervisor_contact:
+          type: string
+          maxLength: 100
+        role_description:
+          type: string
+        internship_start:
+          type: string
+          format: date
+        internship_end:
+          type: string
+          format: date
+      required:
+      - company_location
+      - company_name
+      - company_supervisor_contact
+      - company_supervisor_name
+      - internship_end
+      - internship_start
+    ResendInviteRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    ResendVerificationRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    StudentLogbookEntriesResponse:
+      type: object
+      properties:
+        student:
+          type: string
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LogbookEntry'
+      required:
+      - count
+      - results
+      - student
+    StudentRegister:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        password2:
+          type: string
+          writeOnly: true
+        student_id:
+          type: string
+          maxLength: 50
+      required:
+      - email
+      - first_name
+      - last_name
+      - password
+      - password2
+      - student_id
+    SupervisedStudentsResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - count
+      - results
+    SupervisorPersonalItem:
+      type: object
+      properties:
+        placement_id:
+          type: integer
+        student_name:
+          type: string
+        student_id:
+          type: string
+        program:
+          type: string
+        company:
+          type: string
+        placement_status:
+          type: string
+        logbooks_total:
+          type: integer
+        logbooks_reviewed:
+          type: integer
+        logbooks_pending:
+          type: integer
+        visits_conducted:
+          type: integer
+        has_evaluated:
+          type: boolean
+      required:
+      - company
+      - has_evaluated
+      - logbooks_pending
+      - logbooks_reviewed
+      - logbooks_total
+      - placement_id
+      - placement_status
+      - program
+      - student_id
+      - student_name
+      - visits_conducted
+    SupervisorPersonalReportResponse:
+      type: object
+      properties:
+        supervisor:
+          type: string
+        total_students:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupervisorPersonalItem'
+      required:
+      - results
+      - supervisor
+      - total_students
+    SupervisorVisit:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        placement:
+          type: integer
+        visit_date:
+          type: string
+          format: date
+        notes:
+          type: string
+        outcome:
+          $ref: '#/components/schemas/OutcomeEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        student_name:
+          type: string
+          readOnly: true
+        company_name:
+          type: string
+          readOnly: true
+        supervisor_name:
+          type: string
+          readOnly: true
+      required:
+      - company_name
+      - created_at
+      - id
+      - placement
+      - student_name
+      - supervisor_name
+      - visit_date
+    SupervisorVisitsGetResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupervisorVisit'
+      required:
+      - count
+      - results
+    SupervisorWorkloadItem:
+      type: object
+      properties:
+        supervisor_name:
+          type: string
+        supervisor_email:
+          type: string
+        active_students:
+          type: integer
+        completed_students:
+          type: integer
+        total_students:
+          type: integer
+        pending_logbook_reviews:
+          type: integer
+        visits_conducted:
+          type: integer
+      required:
+      - active_students
+      - completed_students
+      - pending_logbook_reviews
+      - supervisor_email
+      - supervisor_name
+      - total_students
+      - visits_conducted
+    SupervisorWorkloadReportResponse:
+      type: object
+      properties:
+        total_supervisors:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupervisorWorkloadItem'
+      required:
+      - results
+      - total_supervisors
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TopCompanyItem:
+      type: object
+      properties:
+        company:
+          type: string
+        placements:
+          type: integer
+      required:
+      - company
+      - placements
+    UserDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        full_name:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/UserDetailRoleEnum'
+        is_verified:
+          type: boolean
+        is_active:
+          type: boolean
+      required:
+      - email
+      - first_name
+      - full_name
+      - id
+      - last_name
+      - role
+    UserDetailRoleEnum:
+      enum:
+      - student
+      - coordinator
+      - supervisor
+      - admin
+      type: string
+      description: |-
+        * `student` - Student
+        * `coordinator` - Coordinator
+        * `supervisor` - Supervisor
+        * `admin` - Admin
+    VerifyEmailRequest:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+      - token
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

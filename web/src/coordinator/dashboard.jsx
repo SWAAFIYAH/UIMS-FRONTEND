@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, Children } from "react";
-import { Link } from "react-router-dom";
 import client from "../api/client";
 
 const css = `
@@ -574,6 +573,22 @@ const mapEvaluation = (evaluation) => ({
   status: evaluation.status || evaluation.evaluation_status || evaluation.overall_status || "Unknown",
   submitted: evaluation.submitted_at || evaluation.submission_date || evaluation.created_at || "—",
 });
+const getSupervisorId = (supervisor) => {
+  const rawId = supervisor.id ?? supervisor.supervisor_id ?? supervisor.user_id ?? supervisor.pk;
+  const id = Number(rawId);
+  return Number.isInteger(id) && id > 0 ? id : null;
+};
+const mapAssignmentSupervisor = (supervisor) => ({
+  id: getSupervisorId(supervisor),
+  name: supervisor.name
+    || supervisor.full_name
+    || supervisor.supervisor_name
+    || [supervisor.first_name, supervisor.last_name].filter(Boolean).join(" ")
+    || supervisor.email
+    || supervisor.supervisor_email
+    || "Supervisor",
+  email: supervisor.email || supervisor.supervisor_email || "",
+});
 const getApiErrorMessage = (error, action = "complete this request") => {
   const status = error.response?.status;
 
@@ -633,6 +648,7 @@ function Table({ heads, children }) {
 const Status = ({ cls, children }) => <span className={`status s-${cls}`}>{children}</span>;
 
 export default function OukDashboard({
+  initialPage = "dashboard",
   initialPlacements = [],
   initialSupervisors = [],
   initialLogbooks = [],
@@ -641,14 +657,21 @@ export default function OukDashboard({
 }) {
   const initialSupervisorsRef = useRef(initialSupervisors);
   const refreshDataRef = useRef(null);
-  const [page, setPage] = useState("dashboard");
+  const [page, setPage] = useState(initialPage);
   const [placements, setPlacements] = useState(initialPlacements);
+  const [reportAnalytics, setReportAnalytics] = useState(null);
+  const [departmentalReport, setDepartmentalReport] = useState(null);
+  const [placementReport, setPlacementReport] = useState(null);
+  const [performanceReport, setPerformanceReport] = useState(null);
+  const [reportView, setReportView] = useState("overview");
   const [apiErrors, setApiErrors] = useState({});
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [apiLoading, setApiLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastChecked, setLastChecked] = useState(null);
   const [user, setUser] = useState({});
   const [supervisors, setSupervisors] = useState(initialSupervisors);
+  const [assignmentSupervisors, setAssignmentSupervisors] = useState([]);
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [dark, setDark] = useState(false);
@@ -664,12 +687,24 @@ export default function OukDashboard({
   const [logs, setLogs] = useState(initialLogbooks);
   const [evals, setEvals] = useState(initialEvaluations);
   const timer = useRef();
+  const sessionExpiredRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     let requestInFlight = false;
     const controller = new AbortController();
-    const requestConfig = { signal: controller.signal, timeout: 15000 };
+    const requestConfig = { signal: controller.signal, timeout: 30000 };
+    const shouldStopForExpiredSession = (error) => {
+      if (error.response?.status === 401) {
+        if (!sessionExpiredRef.current) {
+          sessionExpiredRef.current = true;
+          if (!cancelled) setSessionExpired(true);
+          controller.abort();
+        }
+        return true;
+      }
+      return sessionExpiredRef.current || controller.signal.aborted;
+    };
 
     const loadResource = async (key, endpoint, update, map = (value) => value) => {
       try {
@@ -681,7 +716,7 @@ export default function OukDashboard({
         }
         return true;
       } catch (error) {
-        if (controller.signal.aborted) return false;
+        if (shouldStopForExpiredSession(error)) return false;
         console.error(`Could not load ${key}:`, error);
         if (!cancelled) {
           setApiErrors((errors) => ({ ...errors, [key]: getApiErrorMessage(error, `load ${key}`) }));
@@ -699,7 +734,7 @@ export default function OukDashboard({
         }
         return true;
       } catch (error) {
-        if (controller.signal.aborted) return false;
+        if (shouldStopForExpiredSession(error)) return false;
         console.error("Could not load coordinator profile:", error);
         if (!cancelled) {
           setApiErrors((errors) => ({ ...errors, profile: getApiErrorMessage(error, "load your profile") }));
@@ -708,22 +743,45 @@ export default function OukDashboard({
       }
     };
 
+    const loadReport = async (key, endpoint, update) => {
+      try {
+        const { data } = await client.get(endpoint, requestConfig);
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+          throw new Error(`Unexpected ${key} response: expected an object.`);
+        }
+        if (key !== "analytics" && !Array.isArray(data.results)) {
+          throw new Error(`Unexpected ${key} response: expected a results array.`);
+        }
+        if (!cancelled) {
+          update(data);
+          if (key === "performance report") setGrades(data.results);
+          setApiErrors((errors) => ({ ...errors, [key]: "" }));
+        }
+      } catch (error) {
+        if (shouldStopForExpiredSession(error)) return;
+        console.error(`Could not load ${key}:`, error);
+        if (!cancelled) {
+          setApiErrors((errors) => ({ ...errors, [key]: getApiErrorMessage(error, `load ${key}`) }));
+        }
+      }
+    };
+
     const refreshData = async () => {
-      if (requestInFlight || cancelled) return;
+      if (requestInFlight || cancelled || sessionExpiredRef.current) return;
       requestInFlight = true;
       setIsRefreshing(true);
 
       try {
-        await Promise.all([
+        const requests = [
           loadUser(),
-          loadResource("placements", "/internships/placements/all/", setPlacements, mapPlacement),
-          loadResource("logbooks", "/logbooks/overview/", setLogs, mapLogbook),
-          loadResource("evaluations", "/evaluations/review/", setEvals, mapEvaluation),
-          loadResource("grades", "/reports/performance/", setGrades),
+          loadReport("analytics", "/reports/analytics/", setReportAnalytics),
+          loadReport("departmental report", "/reports/departmental/", setDepartmentalReport),
+          loadReport("placement report", "/reports/placements/", setPlacementReport),
+          loadReport("performance report", "/reports/performance/", setPerformanceReport),
           loadResource("supervisors", "/reports/supervisor-workload/", setSupervisors, (supervisor) => {
             const existing = initialSupervisorsRef.current.find((item) => item.email === supervisor.supervisor_email);
             return {
-              id: existing?.id,
+              id: getSupervisorId(supervisor) ?? getSupervisorId(existing || {}),
               name: supervisor.supervisor_name || supervisor.supervisor_email || "Supervisor",
               email: supervisor.supervisor_email || "",
               dept: existing?.dept || "—",
@@ -733,7 +791,16 @@ export default function OukDashboard({
               visits: supervisor.visits_conducted ?? 0,
             };
           }),
-        ]);
+          loadResource("assignment supervisors", "/internships/supervisors/", setAssignmentSupervisors, mapAssignmentSupervisor),
+        ];
+        if (initialPage !== "reports") {
+          requests.push(
+            loadResource("placements", "/internships/placements/all/", setPlacements, mapPlacement),
+            loadResource("logbooks", "/logbooks/overview/", setLogs, mapLogbook),
+            loadResource("evaluations", "/evaluations/review/", setEvals, mapEvaluation),
+          );
+        }
+        await Promise.all(requests);
       } finally {
         requestInFlight = false;
         if (!cancelled) {
@@ -754,7 +821,7 @@ export default function OukDashboard({
       window.clearInterval(intervalId);
       refreshDataRef.current = null;
     };
-  }, []);
+  }, [initialPage]);
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setModal(null);
@@ -797,7 +864,7 @@ export default function OukDashboard({
 
     try {
       await client.patch(`/internships/placements/${currentId}/decision/`, payload);
-      const selectedSupervisor = supervisors.find((s) => Number(s.id) === supervisorId);
+      const selectedSupervisor = assignmentSupervisors.find((s) => Number(s.id) === supervisorId);
       setPlacements((ps) => ps.map((p) => (
         p.id === currentId
           ? {
@@ -846,7 +913,7 @@ export default function OukDashboard({
       await client.patch(`/internships/placements/${currentId}/assign-supervisor/`, {
         supervisor_id: supervisorId,
       });
-      const selectedSupervisor = supervisors.find((s) => Number(s.id) === supervisorId);
+      const selectedSupervisor = assignmentSupervisors.find((s) => Number(s.id) === supervisorId);
       setPlacements((ps) => ps.map((p) => (
         p.id === currentId
           ? { ...p, supervisorId, supervisor: selectedSupervisor?.name || `Supervisor #${supervisorId}` }
@@ -904,6 +971,10 @@ export default function OukDashboard({
   };
   const manageSup = (s) =>
     window.alert(`${s.name}\n${s.email}\n\nStudents: ${s.students}\nActive placements: ${s.active}`);
+  const signInAgain = () => {
+    ["accessToken", "refreshToken", "user", "userName"].forEach((key) => localStorage.removeItem(key));
+    window.location.assign("/login");
+  };
 
   const navBtn = (id, label, extra) => (
     <button className={`nav ${page === id ? "active" : ""}`} type="button" onClick={() => go(id)}>
@@ -928,7 +999,7 @@ export default function OukDashboard({
         {navBtn("logbooks", "▤ \u00a0 Logbooks")}
         {navBtn("evaluations", "✓ \u00a0 Evaluations")}
         {navBtn("grades", "★ \u00a0 Grades")}
-        <Link className="nav" to="/coordinator-reports">▥ &nbsp; Reports</Link>
+        {navBtn("reports", "▥ \u00a0 Reports")}
         <button className="nav" type="button" onClick={() => toast("Settings opened.")}>⚙ &nbsp; Settings</button>
       </aside>
 
@@ -962,7 +1033,13 @@ export default function OukDashboard({
 
         <div className="content">
           {apiLoading && <div role="status" className="muted">Loading coordinator data...</div>}
-          {Object.entries(apiErrors).filter(([, error]) => error).map(([resource, error]) => (
+          {sessionExpired ? (
+            <div role="alert" className="card" style={{ padding: 16, marginBottom: 16 }}>
+              <b>Your session has expired.</b>
+              <p style={{ margin: "8px 0 14px" }}>Sign in again to continue. Your dashboard data will reload after you sign in.</p>
+              <button className="btn" type="button" onClick={signInAgain}>Sign in again</button>
+            </div>
+          ) : Object.entries(apiErrors).filter(([, error]) => error).map(([resource, error]) => (
             <div key={resource} role="alert" className="card" style={{ padding: 16, marginBottom: 16 }}>
               Could not load {resource}: {error}
             </div>
@@ -1147,6 +1224,128 @@ export default function OukDashboard({
               </div>
             </section>
           )}
+
+          {page === "reports" && (
+            <section>
+              <div className="header">
+                <div>
+                  <h1>Institution Reports</h1>
+                  <div className="muted">Live summaries and records from the reporting API.</div>
+                </div>
+              </div>
+              <div className="card">
+                <div className="cardhead">
+                  <div className="tabs" role="tablist" aria-label="Report views">
+                    {["overview", "placements", "departments", "performance", "supervisors"].map((view) => (
+                      <button
+                        key={view}
+                        type="button"
+                        role="tab"
+                        aria-selected={reportView === view}
+                        className={`tab ${reportView === view ? "active" : ""}`}
+                        onClick={() => setReportView(view)}
+                      >
+                        {view[0].toUpperCase() + view.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {reportView === "overview" && (
+                  <>
+                    {reportAnalytics ? (
+                      <div className="stats" style={{ padding: 18, marginBottom: 0 }}>
+                        {[
+                          ["Students", reportAnalytics.users?.students],
+                          ["Supervisors", reportAnalytics.users?.supervisors],
+                          ["Coordinators", reportAnalytics.users?.coordinators],
+                          ["Placements", reportAnalytics.placements?.total],
+                          ["Pending Placements", reportAnalytics.placements?.pending],
+                          ["Active Placements", reportAnalytics.placements?.active],
+                          ["Completed Placements", reportAnalytics.placements?.completed],
+                          ["Rejected Placements", reportAnalytics.placements?.rejected],
+                          ["Logbooks", reportAnalytics.logbooks?.total],
+                          ["Pending Reviews", reportAnalytics.logbooks?.pending_review],
+                          ["Reviewed Logbooks", reportAnalytics.logbooks?.reviewed],
+                          ["Graded Placements", reportAnalytics.grades?.total_graded],
+                        ].map(([label, value]) => (
+                          <div className="stat" key={label}>
+                            <div><span>{label}</span><h2>{value ?? "—"}</h2></div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="row muted">Analytics are not available yet.</div>
+                    )}
+                    {performanceReport?.summary && (
+                      <div className="stats" style={{ padding: 18, marginBottom: 0 }}>
+                        {[
+                          ["Average Score", performanceReport.summary.average_score],
+                          ["Highest Score", performanceReport.summary.highest_score],
+                          ["Lowest Score", performanceReport.summary.lowest_score],
+                        ].map(([label, value]) => (
+                          <div className="stat" key={label}>
+                            <div><span>{label}</span><h2>{value ?? "—"}</h2></div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Table heads={["Top Company", "Placements"]}>
+                      {(reportAnalytics?.top_companies || []).map((company) => (
+                        <tr key={company.company}><td>{company.company}</td><td>{company.placements}</td></tr>
+                      ))}
+                    </Table>
+                  </>
+                )}
+
+                {reportView === "placements" && (
+                  <Table heads={["Student", "Student ID", "Company", "Status", "Supervisor", "Dates", "Final Grade"]}>
+                    {(placementReport?.results || []).filter((item) => match(item.student_name, item.student_id, item.company, item.status, item.supervisor)).map((item) => (
+                      <tr key={item.placement_id}>
+                        <td>{item.student_name}</td><td>{item.student_id}</td><td>{item.company}</td><td><Status cls={statusClass(item.status)}>{item.status}</Status></td>
+                        <td>{item.supervisor || "—"}</td><td>{[item.internship_start, item.internship_end].filter(Boolean).join(" - ") || "—"}</td>
+                        <td>{item.final_grade || "—"}{item.final_score != null ? ` (${item.final_score})` : ""}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                )}
+
+                {reportView === "departments" && (
+                  <Table heads={["Department", "Placements", "Active", "Completed", "Programs", "Companies"]}>
+                    {(departmentalReport?.results || []).filter((item) => match(item.department, ...Object.keys(item.programs || {}), ...(item.companies || []))).map((item) => (
+                      <tr key={item.department}>
+                        <td>{item.department}</td><td>{item.total}</td><td>{item.active}</td><td>{item.completed}</td>
+                        <td>{Object.entries(item.programs || {}).map(([program, count]) => `${program}: ${count}`).join(", ") || "—"}</td>
+                        <td>{(item.companies || []).join(", ") || "—"}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                )}
+
+                {reportView === "performance" && (
+                  <Table heads={["Student", "Student ID", "Program", "Company", "Supervisor", "Company Score", "Supervisor Score", "Final Score", "Grade"]}>
+                    {(performanceReport?.results || grades).filter((item) => match(item.student_name, item.student_id, item.program, item.company, item.supervisor, item.letter_grade)).map((item) => (
+                      <tr key={`${item.student_id}-${item.company}`}>
+                        <td>{item.student_name}</td><td>{item.student_id}</td><td>{item.program}</td><td>{item.company}</td>
+                        <td>{item.supervisor}</td><td>{item.company_score}</td><td>{item.supervisor_score}</td><td>{item.final_score}</td><td>{item.letter_grade}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                )}
+
+                {reportView === "supervisors" && (
+                  <Table heads={["Supervisor", "Email", "Active Students", "Completed Students", "Total Students", "Pending Reviews", "Visits"]}>
+                    {supervisors.filter((item) => match(item.name, item.email)).map((item) => (
+                      <tr key={item.email}>
+                        <td>{item.name}</td><td>{item.email}</td><td>{item.active}</td><td>{item.completed ?? 0}</td>
+                        <td>{item.students}</td><td>{item.pendingReviews}</td><td>{item.visits}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </main>
 
@@ -1175,29 +1374,29 @@ export default function OukDashboard({
             ))}
           </div>
           <div className="formgroup">
-            <label htmlFor="msup-id">Supervisor ID</label>
-            <input
-              id="msup-id"
-              type="number"
-              min="1"
-              step="1"
-              inputMode="numeric"
-              placeholder="Enter the supervisor's account ID"
+            <label htmlFor="msup">Assign Supervisor</label>
+            <select
+              id="msup"
               value={assignSup}
               onChange={(e) => setAssignSup(e.target.value)}
-            />
-            <small className="muted">Use the supervisor's numeric account ID from the admin/staff record.</small>
-          </div>
-          <div className="formgroup">
-            <label htmlFor="msup">Choose a listed supervisor (if available)</label>
-            <select id="msup" value={assignSup} onChange={(e) => setAssignSup(e.target.value)}>
+              disabled={!assignmentSupervisors.some((supervisor) => supervisor.id != null)}
+            >
               <option value="">{current.status === "pending" ? "Assign later" : "Select a supervisor"}</option>
-              {supervisors
-                .filter((s) => s.id != null && String(s.id).trim() !== "" && Number.isInteger(Number(s.id)))
-                .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {assignmentSupervisors
+                .filter((supervisor) => supervisor.id != null)
+                .map((supervisor) => (
+                  <option key={supervisor.id} value={supervisor.id}>
+                    {supervisor.name}{supervisor.email ? ` (${supervisor.email})` : ""}
+                  </option>
+                ))}
             </select>
-            {!supervisors.some((s) => s.id != null && String(s.id).trim() !== "" && Number.isInteger(Number(s.id))) &&
-              <small className="muted">No IDs are available in the workload list. Enter the ID above to assign manually.</small>}
+            {apiErrors["assignment supervisors"] ? (
+              <small className="muted">{apiErrors["assignment supervisors"]}</small>
+            ) : !assignmentSupervisors.some((supervisor) => supervisor.id != null) ? (
+              <small className="muted">No active supervisors are available for assignment.</small>
+            ) : (
+              null
+            )}
           </div>
         </Modal>
       )}

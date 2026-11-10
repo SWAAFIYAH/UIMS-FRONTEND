@@ -1,41 +1,403 @@
 import { useState, useEffect, useRef, Children } from "react";
+import client from "../api/client";
 
 const css = `
-.sd{--p:#0b3d91;--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--border:#e5e7eb;--green:#16a34a;--red:#dc2626;--orange:#d97706}
-.sd.dark{--bg:#0f172a;--card:#1e293b;--text:#e5e7eb;--muted:#94a3b8;--border:#334155}
-.sd *{box-sizing:border-box}.sd{font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.sd button,.sd input,.sd select{font:inherit;color:inherit}.sd button{cursor:pointer}
-.sd .top{height:70px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 28px;position:sticky;top:0;z-index:5}
-.sd .brand{display:flex;gap:10px;align-items:center}.sd .logoicon{width:42px;height:42px;background:var(--p);color:#fff;border-radius:10px;display:grid;place-items:center;font-weight:bold}
-.sd .brand h3{margin:0;font-size:16px}
-.sd .search{background:var(--bg);border:1px solid var(--border);padding:10px 13px;border-radius:9px;width:320px;max-width:100%}.sd .search input{border:0;background:none;outline:0;width:88%}
-.sd .actions{display:flex;align-items:center;gap:12px}.sd .icon{border:1px solid var(--border);background:var(--card);border-radius:8px;padding:9px}
-.sd .avatar{width:38px;height:38px;border-radius:50%;background:var(--p);color:#fff;display:grid;place-items:center;font-weight:bold}
-.sd .content{padding:28px;max-width:1280px;margin:0 auto}
-.sd .header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}.sd .header h1{margin:0 0 5px;font-size:25px}
-.sd .muted{color:var(--muted);font-size:13px}
-.sd .btn{border:0;border-radius:8px;padding:10px 15px;background:var(--p);color:#fff!important}.sd .btn.secondary{background:var(--card);color:var(--text)!important;border:1px solid var(--border)}.sd .btn:disabled{opacity:.6;cursor:not-allowed}
-.sd .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:17px;margin-bottom:22px}
-.sd .stat,.sd .card{background:var(--card);border:1px solid var(--border);border-radius:13px;box-shadow:0 7px 22px #0f172a0b}
-.sd .stat{padding:18px;display:flex;justify-content:space-between}.sd .stat span{color:var(--muted);font-size:13px}.sd .stat h2{margin:6px 0;font-size:28px}
-.sd .staticon{width:48px;height:48px;border-radius:11px;background:#fff4df;color:var(--orange);display:grid;place-items:center}
-.sd .card{margin-bottom:22px}
-.sd .tablewrap{overflow:auto}.sd table{width:100%;border-collapse:collapse;min-width:760px}
-.sd th{background:var(--bg);color:var(--muted);font-size:11px;text-align:left;padding:12px;text-transform:uppercase}.sd td{padding:13px;border-top:1px solid var(--border);font-size:13px}
-.sd .person{display:flex;gap:9px;align-items:center}.sd .sa{width:35px;height:35px;border-radius:50%;background:#e8eefb;color:var(--p);display:grid;place-items:center;font-weight:bold}
-.sd .action{border:1px solid var(--border);background:var(--card);padding:7px 10px;border-radius:6px}
-.sd .modalbg{position:fixed;inset:0;background:#0f172a99;display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}
-.sd .modal{background:var(--card);width:100%;max-width:560px;border-radius:14px;max-height:90vh;overflow:auto}
-.sd .modalhead{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}.sd .modalhead h3{margin:0}
-.sd .modalbody{padding:20px}.sd .modalfoot{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
-.sd .close{border:0;background:none;font-size:22px}.sd .details{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.sd .detail{background:var(--bg);padding:12px;border-radius:8px}.sd .detail-label{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
-.sd .formgroup{margin:15px 0}.sd .formgroup label{display:block;font-weight:bold;font-size:13px;margin-bottom:6px}
-.sd .formgroup input,.sd .formgroup select{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card)}
-.sd .toast{position:fixed;right:22px;bottom:22px;background:#172033;color:#fff;padding:13px 17px;border-radius:8px;opacity:0;transform:translateY(80px);transition:.25s;z-index:30}.sd .toast.show{opacity:1;transform:none}
-.sd .sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-@media(max-width:800px){.sd .stats{grid-template-columns:1fr}}
-@media(max-width:600px){.sd .top{padding:0 14px}.sd .brand h3{display:none}.sd .content{padding:18px 14px}.sd .details{grid-template-columns:1fr}}
+.sd {
+  --p: #0b3d91;
+  --bg: #f5f7fb;
+  --card: #fff;
+  --text: #172033;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --green: #16a34a;
+  --red: #dc2626;
+  --orange: #d97706;
+}
+
+.sd.dark {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --border: #334155;
+}
+
+.sd * {
+  box-sizing: border-box;
+}
+
+.sd {
+  font-family: Segoe UI, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.sd button,
+.sd input,
+.sd select {
+  font: inherit;
+  color: inherit;
+}
+
+.sd button {
+  cursor: pointer;
+}
+
+.sd .top {
+  height: 70px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.sd .brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.sd .logoicon {
+  width: 42px;
+  height: 42px;
+  background: var(--p);
+  color: #fff;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+}
+
+.sd .brand h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.sd .search {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 10px 13px;
+  border-radius: 9px;
+  width: 320px;
+  max-width: 100%;
+}
+
+.sd .search input {
+  border: 0;
+  background: none;
+  outline: 0;
+  width: 88%;
+}
+
+.sd .actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sd .icon {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 9px;
+}
+
+.sd .avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--p);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+}
+
+.sd .content {
+  padding: 28px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.sd .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.sd .header h1 {
+  margin: 0 0 5px;
+  font-size: 25px;
+}
+
+.sd .muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sd .btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 15px;
+  background: var(--p);
+  color: #fff !important;
+}
+
+.sd .btn.secondary {
+  background: var(--card);
+  color: var(--text) !important;
+  border: 1px solid var(--border);
+}
+
+.sd .btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.sd .stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 17px;
+  margin-bottom: 22px;
+}
+
+.sd .stat,
+.sd .card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  box-shadow: 0 7px 22px #0f172a0b;
+}
+
+.sd .stat {
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.sd .stat span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sd .stat h2 {
+  margin: 6px 0;
+  font-size: 28px;
+}
+
+.sd .staticon {
+  width: 48px;
+  height: 48px;
+  border-radius: 11px;
+  background: #fff4df;
+  color: var(--orange);
+  display: grid;
+  place-items: center;
+}
+
+.sd .card {
+  margin-bottom: 22px;
+}
+
+.sd .tablewrap {
+  overflow: auto;
+}
+
+.sd table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.sd th {
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 11px;
+  text-align: left;
+  padding: 12px;
+  text-transform: uppercase;
+}
+
+.sd td {
+  padding: 13px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.sd .person {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+
+.sd .sa {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #e8eefb;
+  color: var(--p);
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+}
+
+.sd .action {
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 7px 10px;
+  border-radius: 6px;
+}
+
+.sd .modalbg {
+  position: fixed;
+  inset: 0;
+  background: #0f172a99;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 20;
+}
+
+.sd .modal {
+  background: var(--card);
+  width: 100%;
+  max-width: 560px;
+  border-radius: 14px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.sd .modalhead {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+}
+
+.sd .modalhead h3 {
+  margin: 0;
+}
+
+.sd .modalbody {
+  padding: 20px;
+}
+
+.sd .modalfoot {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sd .close {
+  border: 0;
+  background: none;
+  font-size: 22px;
+}
+
+.sd .details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sd .detail {
+  background: var(--bg);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.sd .detail-label {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.sd .formgroup {
+  margin: 15px 0;
+}
+
+.sd .formgroup label {
+  display: block;
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.sd .formgroup input,
+.sd .formgroup select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.sd .toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  background: #172033;
+  color: #fff;
+  padding: 13px 17px;
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(80px);
+  transition: .25s;
+  z-index: 30;
+}
+
+.sd .toast.show {
+  opacity: 1;
+  transform: none;
+}
+
+.sd .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media(max-width:800px) {
+  .sd .stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media(max-width:600px) {
+  .sd .top {
+    padding: 0 14px;
+  }
+
+  .sd .brand h3 {
+    display: none;
+  }
+
+  .sd .content {
+    padding: 18px 14px;
+  }
+
+  .sd .details {
+    grid-template-columns: 1fr;
+  }
+}
 `;
 
 const NONE = [];
@@ -89,8 +451,6 @@ export default function SupervisorDashboard({
   const [toastMsg, setToastMsg] = useState("");
   const [toastShow, setToastShow] = useState(false);
   const timer = useRef();
-
-  useEffect(() => { setSupervisors(initialSupervisors); }, [initialSupervisors]);
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setModal(null);
@@ -236,6 +596,189 @@ export default function SupervisorDashboard({
       )}
 
       <div className={`toast ${toastShow ? "show" : ""}`}>{toastMsg}</div>
+    </div>
+  );
+}
+
+const textValue = (value) => {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (!value || typeof value !== "object") return "";
+  return value.full_name || value.name || value.email || "";
+};
+
+const mapAssignedStudent = (item, index) => {
+  const placement = item.placement && typeof item.placement === "object" ? item.placement : {};
+  const student = item.student && typeof item.student === "object" ? item.student : {};
+  const fullName = [student.first_name, student.last_name].filter(Boolean).join(" ");
+
+  return {
+    id: item.placement_id ?? placement.id ?? item.id ?? index,
+    student: textValue(item.student_name ?? item.full_name ?? student.full_name) || fullName || textValue(item.student) || "Assigned student",
+    studentId: textValue(item.student_id ?? student.student_id),
+    program: textValue(item.program ?? student.program) || "—",
+    company: textValue(item.company_name ?? item.company ?? placement.company_name) || "—",
+    status: textValue(item.placement_status ?? item.status ?? placement.status) || "—",
+    start: textValue(item.internship_start ?? placement.internship_start),
+    end: textValue(item.internship_end ?? placement.internship_end),
+  };
+};
+
+export function AssignedStudentsDashboard() {
+  const [students, setStudents] = useState([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const loadRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let requestInFlight = false;
+    const controller = new AbortController();
+
+    const loadAssignedStudents = async () => {
+      if (requestInFlight || cancelled) return;
+      requestInFlight = true;
+      setRefreshing(true);
+
+      try {
+        const { data } = await client.get("/logbooks/students/", {
+          signal: controller.signal,
+          timeout: 30000,
+        });
+        const results = Array.isArray(data) ? data : data?.results;
+        if (!Array.isArray(results)) {
+          throw new Error("Unexpected assigned-students response: expected a results array.");
+        }
+        if (!cancelled) {
+          setStudents(results.map(mapAssignedStudent));
+          setError("");
+        }
+      } catch (requestError) {
+        if (controller.signal.aborted) return;
+        console.error("Could not load assigned students:", requestError);
+        if (!cancelled) {
+          const status = requestError.response?.status;
+          setError(
+            status === 401
+              ? "Your session may have expired. Please sign in again."
+              : status === 403
+                ? "This account does not have permission to view assigned students."
+                : requestError.isAxiosError
+                  ? "Could not connect to the service. Check your connection and try again."
+                  : requestError.message || "Could not load assigned students."
+          );
+        }
+      } finally {
+        requestInFlight = false;
+        if (!cancelled) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    };
+
+    loadRef.current = loadAssignedStudents;
+    loadAssignedStudents();
+    const intervalId = window.setInterval(loadAssignedStudents, 30000);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearInterval(intervalId);
+      loadRef.current = null;
+    };
+  }, []);
+
+  const filteredStudents = students.filter((student) =>
+    [student.student, student.studentId, student.program, student.company, student.status]
+      .join(" ")
+      .toLowerCase()
+      .includes(query.trim().toLowerCase())
+  );
+
+  return (
+    <div className="sd">
+      <style>{css}</style>
+      <header className="top">
+        <div className="brand">
+          <div className="logoicon">OUK</div>
+          <h3>OUK Internship</h3>
+        </div>
+        <div className="search">
+          <label className="sr-only" htmlFor="assigned-search">Search assigned students</label>
+          <input
+            id="assigned-search"
+            type="search"
+            placeholder="Search students or companies..."
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <div className="actions">
+          <button
+            className="icon"
+            type="button"
+            aria-label="Refresh assigned students"
+            disabled={refreshing}
+            onClick={() => loadRef.current?.()}
+          >
+            {refreshing ? "…" : "⟳"}
+          </button>
+        </div>
+      </header>
+
+      <main className="content">
+        <div className="header">
+          <div>
+            <h1>My Assigned Students</h1>
+            <div className="muted">Students assigned to you for internship supervision.</div>
+          </div>
+        </div>
+
+        <div className="stats">
+          <div className="stat">
+            <div><span>Assigned Students</span><h2>{students.length}</h2></div>
+            <div className="staticon">♙</div>
+          </div>
+        </div>
+
+        {error && <div className="card" role="alert" style={{ padding: 16 }}>{error}</div>}
+
+        <div className="card">
+          <div className="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  {["Student", "Student ID", "Program", "Company", "Placement Status", "Internship Dates"].map((heading) => (
+                    <th key={heading}>{heading}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={6} className="muted" style={{ textAlign: "center", padding: 32 }}>Loading assigned students…</td></tr>
+                ) : filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="muted" style={{ textAlign: "center", padding: 32 }}>
+                      {error ? "Assigned students could not be loaded." : students.length ? "No students match your search." : "No students have been assigned to you yet."}
+                    </td>
+                  </tr>
+                ) : filteredStudents.map((student) => (
+                  <tr key={student.id}>
+                    <td><b>{student.student}</b></td>
+                    <td>{student.studentId || "—"}</td>
+                    <td>{student.program}</td>
+                    <td>{student.company}</td>
+                    <td>{student.status}</td>
+                    <td>{[student.start, student.end].filter(Boolean).join(" - ") || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,25 +1,34 @@
 import client from "./client";
 
 export const login = async (email, password) => {
-    // 1. Destructure 'data' from the Axios response object
     const { data } = await client.post("/auth/login/", { email, password });
-    
-    // 2. Use 'data' (not 'response') and the correct plural 'tokens' key
-    if (data.tokens) {
-        localStorage.setItem("accessToken", data.tokens.access);
-        localStorage.setItem("refreshToken", data.tokens.refresh);
+
+    const accessToken = data.tokens?.access ?? data.access ?? data.access_token ?? data.token;
+    const refreshToken = data.tokens?.refresh ?? data.refresh ?? data.refresh_token;
+    if (accessToken) {
+        localStorage.setItem("accessToken", accessToken);
     }
-    
-    if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
+    if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
     }
-    
+
+    let user = data.user;
+    if (!user && accessToken) {
+        const profileResponse = await client.get("/auth/me/");
+        user = profileResponse.data;
+    }
+
+    if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+    } else {
+        throw new Error("The server did not return a user profile for this login.");
+    }
+
     if (data.placement_status) {
         localStorage.setItem("placementStatus", data.placement_status);
     }
 
-    // 3. Return the entire data object so Login.jsx can inspect response.user.role
-    return data;
+    return { ...data, user };
 };
 
 export const registerStudent = async (studentData) => {

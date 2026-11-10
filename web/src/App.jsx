@@ -7,11 +7,7 @@ import SubmitPlacementForm from "./pages/submitPlacementForm";
 import VerifyEmail from "./pages/verifyEmail";
 import { Routes, Route } from 'react-router-dom';
 import OukDashboard from "./coordinator/dashboard";
-import PlacementDashboard from "./coordinator/placement";
-import SupervisorDashboard from "./coordinator/supervisor-dash";
-import Logbooks from "./coordinator/logbook";
-import Grades from "./coordinator/Grades";
-import ReportOversight from "./coordinator/reports";
+import { AssignedStudentsDashboard } from "./coordinator/supervisor-dash";
 
 
 function App() {
@@ -32,11 +28,12 @@ function App() {
       <Route path="/student-dashboard" element={<StudentDashboard />} />
       <Route path="/submit-placement" element={<SubmitPlacementForm />} />
       <Route path="/coordinator-dashboard" element={<OukDashboard />} />
-      <Route path="/coordinator-placements" element={<PlacementDashboard />} />
-      <Route path="/coordinator-logbooks" element={<Logbooks />} />
-      <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
-      <Route path="/coordinator-grades" element={<Grades />} />
-      <Route path="/coordinator-reports" element={<ReportOversight />} />
+      <Route path="/coordinator-placements" element={<OukDashboard initialPage="placements" />} />
+      <Route path="/coordinator-logbooks" element={<OukDashboard initialPage="logbooks" />} />
+      <Route path="/supervisor-dashboard" element={<AssignedStudentsDashboard />} />
+      <Route path="/coordinator-grades" element={<OukDashboard initialPage="grades" />} />
+      <Route path="/coordinator-reports" element={<OukDashboard initialPage="reports" />} />
+      <Route path="/admin-dashboard" element={<OukDashboard initialPage="reports" />} />
 
       {/* Logbook pages */}
       <Route path="/submit-logbook" element={<SubmitLogbookForm />} />

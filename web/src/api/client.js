@@ -1,26 +1,37 @@
 import axios from "axios";
 
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "");
+const apiBaseUrl = configuredApiUrl
+    ? configuredApiUrl.endsWith("/api")
+        ? configuredApiUrl
+        : `${configuredApiUrl}/api`
+    : "https://uims-67iz.onrender.com/api";
+
 const client = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || "https://uims-67iz.onrender.com/api",
+    baseURL: apiBaseUrl,
+    timeout: 30000,
 });
 
-// Automatically attach the JWT access token to every request if it exists
 client.interceptors.request.use(
     (config) => {
-        // Skip attaching tokens for public auth routes to prevent 401 login blocks
-        if (config.url?.includes("/auth/login/") || config.url?.includes("/auth/register/")||config.url?.includes("/auth/invite/accept")||config.url?.includes("/auth/verify-email")||config.url?.includes("/auth/invite/check") ) {
-             return config;
+        const isPublicAuthRoute = [
+            "/auth/login/",
+            "/auth/register/",
+            "/auth/invite/accept/",
+            "/auth/verify-email/",
+            "/auth/invite/check/",
+        ].some((route) => config.url?.includes(route));
+
+        if (!isPublicAuthRoute && typeof localStorage !== "undefined") {
+            const token = localStorage.getItem("accessToken");
+            if (token) {
+                config.headers.set("Authorization", `Bearer ${token}`);
+            }
         }
 
-        const token = localStorage.getItem("accessToken");
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 export default client;
