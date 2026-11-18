@@ -3,6 +3,7 @@ import './SupervisorDashboard.css';
 import { 
   fetchAssignedStudents, 
   fetchStudentLogbookEntries, 
+  fetchLogbookEntry,
   fetchLogbooksOverview,
   submitLogbookFeedback, 
   fetchFieldVisits, 
@@ -41,6 +42,7 @@ function SupervisorDashboard() {
 
   const [showLogbookModal, setShowLogbookModal] = useState(false);
   const [selectedLogbook, setSelectedLogbook] = useState(null);
+  const [loadingLogbook, setLoadingLogbook] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [reviewDecision, setReviewDecision] = useState('APPROVED');
 
@@ -181,11 +183,23 @@ function SupervisorDashboard() {
     }
   }
 
-  function openLogbookModal(logbook) {
+  async function openLogbookModal(logbook) {
     setSelectedLogbook(logbook);
     setFeedbackText('');
     setReviewDecision('APPROVED');
     setShowLogbookModal(true);
+    setLoadingLogbook(true);
+
+    try {
+      const logbookDetails = await fetchLogbookEntry(logbook.id);
+      setSelectedLogbook(logbookDetails);
+    } catch (err) {
+      console.error("Error fetching logbook details:", err);
+      setShowLogbookModal(false);
+      alert("Failed to load the full logbook entry.");
+    } finally {
+      setLoadingLogbook(false);
+    }
   }
 
   async function saveLogbookFeedback() {
@@ -895,7 +909,11 @@ function SupervisorDashboard() {
             </p>
             <div style={{ background: 'var(--light-bg)', padding: '1rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem' }}>
               <strong>Student Entry:</strong>
-              <p style={{ marginTop: '0.4rem' }}>{selectedLogbook.content || selectedLogbook.summary || 'Summary submitted.'}</p>
+              {loadingLogbook ? (
+                <p style={{ marginTop: '0.4rem' }}>Loading full logbook entry...</p>
+              ) : (
+                <p style={{ marginTop: '0.4rem' }}>{selectedLogbook.content || selectedLogbook.summary || 'No entry content provided.'}</p>
+              )}
             </div>
 
             <div className="remarks-box" style={{ marginTop: '0.5rem' }}>
@@ -921,7 +939,7 @@ function SupervisorDashboard() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
               <button className="btn btn-secondary" onClick={() => setShowLogbookModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveLogbookFeedback}>Submit Decision</button>
+              <button className="btn btn-primary" onClick={saveLogbookFeedback} disabled={loadingLogbook}>Submit Decision</button>
             </div>
           </div>
         </div>

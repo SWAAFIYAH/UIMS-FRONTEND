@@ -82,6 +82,12 @@ export const fetchStudentLogbookEntries = async (placementId) => {
   return response.data;
 };
 
+// GET /api/logbooks/{entry_id}/ -> Fetch one logbook entry with its feedback
+export const fetchLogbookEntry = async (entryId) => {
+  const response = await api.get(`/api/logbooks/${entryId}/`);
+  return response.data;
+};
+
 // POST /api/logbooks/{entry_id}/feedback/ -> Submit logbook feedback
 export const submitLogbookFeedback = async (entryId, feedbackData) => {
   const response = await api.post(`/api/logbooks/${entryId}/feedback/`, feedbackData);
