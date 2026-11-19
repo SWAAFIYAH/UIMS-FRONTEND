@@ -21,3 +21,21 @@ export const login = async (email, password) => {
     // 3. Return the entire data object so Login.jsx can inspect response.user.role
     return data;
 };
+
+export const logout = async () => {
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    try {
+        if (refreshToken) {
+            await client.post("/auth/logout/", {
+                refresh: refreshToken,
+            });
+        }
+    } finally {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        localStorage.removeItem("userName");
+        localStorage.removeItem("placementStatus");
+    }
+};

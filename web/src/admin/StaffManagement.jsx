@@ -1,6 +1,6 @@
-
 import { useState } from "react";
-import { Plus, Search, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Search, X, Mail } from "lucide-react";
+import { createStaff, resendStaffInvite } from "../api/staff";
 
 const emptyForm = {
   first_name: "",
@@ -9,36 +9,58 @@ const emptyForm = {
   role: "coordinator",
 };
 
+function extractErrorMessage(err, fallback) {
+  const data = err.response?.data;
+  if (!data) return err.message || fallback;
+  if (typeof data === "string") return data;
+  if (data.detail && typeof data.detail === "string") return data.detail;
+  if (data.message && typeof data.message === "string") return data.message;
+
+  try {
+    const messages = Object.values(data)
+      .flat(Infinity)
+      .map((val) => (typeof val === "object" ? JSON.stringify(val) : String(val)))
+      .filter(Boolean);
+    return messages.length > 0 ? messages.join(" ") : err.message || fallback;
+  } catch {
+    return err.message || fallback;
+  }
+}
+
 export default function StaffManagement({ role = "All" }) {
   const [staff, setStaff] = useState([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ ...emptyForm });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [resendingId, setResendingId] = useState(null);
 
-  const isCombined = role === "All";
-  const fixedRole =
-    role === "Coordinators" ? "coordinator" : "supervisor";
+  const normalizedRole = (role || "").trim().toLowerCase();
+  const isCombined = normalizedRole === "all" || !normalizedRole;
+  const fixedRole = normalizedRole.startsWith("coord") ? "coordinator" : "supervisor";
 
   const pageTitle = isCombined
     ? "Staff Management"
     : `${fixedRole === "coordinator" ? "Coordinator" : "Supervisor"} Management`;
 
-  const visibleStaff = staff.filter((person) => {
-    const matchesRole =
-      isCombined || person.role === fixedRole;
+  const roleStaff = staff.filter(
+    (person) => isCombined || person.role?.toLowerCase() === fixedRole
+  );
 
-    const fullName =
-      `${person.first_name} ${person.last_name} ${person.email}`;
+  const visibleStaff = roleStaff.filter((person) => {
+    const searchTarget = [person.first_name, person.last_name, person.email]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-    return (
-      matchesRole &&
-      fullName.toLowerCase().includes(search.toLowerCase())
-    );
+    return searchTarget.includes(search.toLowerCase());
   });
 
   function openAddForm() {
-    setEditingId(null);
+    setError("");
+    setSuccess("");
     setForm({
       ...emptyForm,
       role: isCombined ? "coordinator" : fixedRole,
@@ -46,50 +68,76 @@ export default function StaffManagement({ role = "All" }) {
     setShowForm(true);
   }
 
-  function openEditForm(person) {
-    setEditingId(person.id);
+  function closeAddForm() {
+    setShowForm(false);
     setForm({
-      first_name: person.first_name,
-      last_name: person.last_name,
-      email: person.email,
-      role: person.role,
+      ...emptyForm,
+      role: isCombined ? "coordinator" : fixedRole,
     });
-    setShowForm(true);
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
     const newStaff = {
-      ...form,
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      email: form.email.trim(),
       role: isCombined ? form.role : fixedRole,
     };
 
-    if (editingId !== null) {
-      setStaff((current) =>
-        current.map((person) =>
-          person.id === editingId
-            ? { ...person, ...newStaff }
-            : person
+    try {
+      const response = await createStaff(newStaff);
+
+      setStaff((currentStaff) => [
+        ...currentStaff,
+        {
+          ...newStaff,
+          id: response?.data?.id || response?.id || `temporary-${Date.now()}`,
+        },
+      ]);
+
+      closeAddForm();
+      setSuccess(
+        "Staff member created successfully. An invitation email has been sent to their email address."
+      );
+    } catch (requestError) {
+      console.error("Unable to create staff:", requestError);
+      setError(
+        extractErrorMessage(
+          requestError,
+          "Unable to create staff. Please try again."
         )
       );
-    } else {
-      setStaff((current) => [
-        ...current,
-        { ...newStaff, id: Date.now() },
-      ]);
+    } finally {
+      setSaving(false);
     }
-
-    setShowForm(false);
-    setEditingId(null);
-    setForm({ ...emptyForm });
   }
 
-  function deleteStaff(id) {
-    if (window.confirm("Delete this staff member?")) {
-      setStaff((current) =>
-        current.filter((person) => person.id !== id)
+  async function handleResendInvite(person) {
+    if (!person.email) return;
+
+    setError("");
+    setSuccess("");
+    setResendingId(person.id);
+
+    try {
+      await resendStaffInvite(person.email);
+      setSuccess(`Invitation request submitted for ${person.email}.`);
+    } catch (requestError) {
+      console.error("Unable to resend invitation:", requestError);
+      setError(
+        extractErrorMessage(
+          requestError,
+          "Unable to resend invitation. Please try again."
+        )
       );
+    } finally {
+      setResendingId(null);
     }
   }
 
@@ -105,21 +153,25 @@ export default function StaffManagement({ role = "All" }) {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="primary-button"
-          onClick={openAddForm}
-        >
+        <button type="button" className="primary-button" onClick={openAddForm}>
           <Plus size={18} />
-          Add {isCombined ? "Staff" : fixedRole === "coordinator" ? "Coordinator" : "Supervisor"}
+          Add{" "}
+          {isCombined
+            ? "Staff"
+            : fixedRole === "coordinator"
+              ? "Coordinator"
+              : "Supervisor"}
         </button>
       </div>
 
       <div className="staff-summary">
         <div>
-          <span>Total {isCombined ? "Staff" : pageTitle.replace(" Management", "s")}</span>
-          <strong>{visibleStaff.length}</strong>
+          <span>
+            Total {isCombined ? "Staff" : `${fixedRole === "coordinator" ? "Coordinators" : "Supervisors"}`}
+          </span>
+          <strong>{roleStaff.length}</strong>
         </div>
+
         <div>
           <span>Showing</span>
           <strong>{visibleStaff.length}</strong>
@@ -127,10 +179,23 @@ export default function StaffManagement({ role = "All" }) {
       </div>
 
       <section className="panel staff-panel">
+        {error && (
+          <p role="alert" className="staff-note">
+            {error}
+          </p>
+        )}
+
+        {success && (
+          <p role="status" className="staff-note">
+            {success}
+          </p>
+        )}
+
         <div className="staff-search">
           <Search size={18} />
           <input
             type="search"
+            aria-label="Search staff by name or email"
             placeholder="Search staff by name or email..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -140,13 +205,11 @@ export default function StaffManagement({ role = "All" }) {
         {showForm && (
           <form className="staff-form" onSubmit={handleSubmit}>
             <div className="staff-form-heading">
-              <h3>
-                {editingId !== null ? "Edit Staff" : "Add Staff"}
-              </h3>
+              <h3>Add Staff</h3>
               <button
                 type="button"
                 className="staff-close"
-                onClick={() => setShowForm(false)}
+                onClick={closeAddForm}
                 aria-label="Close form"
               >
                 <X size={20} />
@@ -158,6 +221,7 @@ export default function StaffManagement({ role = "All" }) {
                 First name
                 <input
                   required
+                  name="first_name"
                   value={form.first_name}
                   onChange={(event) =>
                     setForm({ ...form, first_name: event.target.value })
@@ -170,6 +234,7 @@ export default function StaffManagement({ role = "All" }) {
                 Last name
                 <input
                   required
+                  name="last_name"
                   value={form.last_name}
                   onChange={(event) =>
                     setForm({ ...form, last_name: event.target.value })
@@ -183,6 +248,7 @@ export default function StaffManagement({ role = "All" }) {
                 <input
                   required
                   type="email"
+                  name="email"
                   value={form.email}
                   onChange={(event) =>
                     setForm({ ...form, email: event.target.value })
@@ -194,6 +260,7 @@ export default function StaffManagement({ role = "All" }) {
               <label>
                 Role
                 <select
+                  name="role"
                   value={isCombined ? form.role : fixedRole}
                   disabled={!isCombined}
                   onChange={(event) =>
@@ -210,17 +277,17 @@ export default function StaffManagement({ role = "All" }) {
               <button
                 type="button"
                 className="staff-cancel"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingId(null);
-                  setForm({ ...emptyForm });
-                }}
+                onClick={closeAddForm}
               >
                 Cancel
               </button>
 
-              <button type="submit" className="primary-button">
-                {editingId !== null ? "Save Changes" : "Submit"}
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Submit"}
               </button>
             </div>
           </form>
@@ -245,27 +312,22 @@ export default function StaffManagement({ role = "All" }) {
                   <td>{person.last_name}</td>
                   <td>{person.email}</td>
                   <td>
-                    {person.role === "coordinator"
-                      ? "Coordinator"
-                      : "Supervisor"}
+                    {person.role
+                      ? person.role.charAt(0).toUpperCase() + person.role.slice(1).toLowerCase()
+                      : "—"}
                   </td>
                   <td>
-                    <div className="staff-actions">
-                      <button
-                        type="button"
-                        title="Edit"
-                        onClick={() => openEditForm(person)}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        title="Delete"
-                        onClick={() => deleteStaff(person.id)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="staff-cancel"
+                      onClick={() => handleResendInvite(person)}
+                      disabled={resendingId === person.id || !person.email}
+                    >
+                      <Mail size={15} />
+                      {resendingId === person.id
+                        ? "Sending..."
+                        : "Resend Invitation"}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -275,7 +337,7 @@ export default function StaffManagement({ role = "All" }) {
                   <td colSpan="5" className="staff-empty">
                     {search
                       ? "No matching staff found. Try another search."
-                      : "No staff records yet. Click Add Staff to begin."}
+                      : "No staff records loaded. Add a staff member or connect the backend list endpoint."}
                   </td>
                 </tr>
               )}
@@ -284,8 +346,8 @@ export default function StaffManagement({ role = "All" }) {
         </div>
 
         <p className="staff-note">
-          Preview mode: records are temporary and disappear when
-          you refresh. Backend integration is not connected yet.
+          Existing staff records are not loaded from the backend yet. Newly
+          created records shown here are temporary.
         </p>
       </section>
     </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -10,11 +10,14 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
+import { getSupervisors } from "../api/staff";
+import { getPlacements } from "../api/placements";
 
 const emptyForm = {
   studentName: "",
   registrationNumber: "",
   organisation: "",
+  supervisorId: "",
   role: "",
   startDate: "",
   endDate: "",
@@ -29,6 +32,9 @@ function Placements() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
+   const [loadingPlacements, setLoadingPlacements] = useState(true);
+const [placementsError, setPlacementsError] = useState("");
+
   const filteredPlacements = placements.filter((placement) => {
     const search = searchTerm.toLowerCase();
 
@@ -37,6 +43,7 @@ function Placements() {
       placement.registrationNumber.toLowerCase().includes(search) ||
       placement.organisation.toLowerCase().includes(search) ||
       placement.role.toLowerCase().includes(search);
+     
 
     const matchesStatus =
       statusFilter === "All" || placement.status === statusFilter;
@@ -62,19 +69,22 @@ function Placements() {
     setShowModal(true);
   };
 
-  const openEditModal = (placement) => {
-    setEditingId(placement.id);
-    setForm({
-      studentName: placement.studentName,
-      registrationNumber: placement.registrationNumber,
-      organisation: placement.organisation,
-      role: placement.role,
-      startDate: placement.startDate,
-      endDate: placement.endDate,
-      status: placement.status,
-    });
-    setShowModal(true);
-  };
+ const openEditModal = (placement) => {
+  setEditingId(placement.id);
+
+  setForm({
+    studentName: placement.studentName,
+    registrationNumber: placement.registrationNumber,
+    organisation: placement.organisation,
+    role: placement.role,
+    supervisorId: placement.supervisorId || "",
+    startDate: placement.startDate,
+    endDate: placement.endDate,
+    status: placement.status,
+  });
+
+  setShowModal(true);
+};
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -109,6 +119,68 @@ function Placements() {
       );
     }
   };
+  const [supervisors, setSupervisors] = useState([]);
+const [loadingSupervisors, setLoadingSupervisors] = useState(true);
+const [supervisorError, setSupervisorError] = useState("");
+
+useEffect(() => {
+  const fetchSupervisors = async () => {
+    try {
+      setLoadingSupervisors(true);
+      setSupervisorError("");
+
+      const data = await getSupervisors();
+      setSupervisors(data);
+    } catch (error) {
+      console.error("Failed to load supervisors:", error);
+      setSupervisorError(
+        "Unable to load supervisors. Please try again."
+      );
+    } finally {
+      setLoadingSupervisors(false);
+    }
+  };
+
+  fetchSupervisors();
+}, []);
+useEffect(() => {
+  const fetchPlacements = async () => {
+    try {
+      setLoadingPlacements(true);
+      setPlacementsError("");
+
+      const data = await getPlacements();
+
+      const formattedPlacements = data.map((item) => ({
+        id: item.id,
+        studentName: item.student_name || "",
+        registrationNumber: item.student_id || "",
+        organisation: item.company_name || "",
+        role: item.role_description || "",
+        supervisorId: item.supervisor
+          ? String(item.supervisor)
+          : "",
+        startDate: item.internship_start || "",
+        endDate: item.internship_end || "",
+        status: item.status
+          ? item.status.charAt(0).toUpperCase() +
+            item.status.slice(1)
+          : "Pending",
+      }));
+
+      setPlacements(formattedPlacements);
+    } catch (error) {
+      console.error("Failed to load placements:", error);
+      setPlacementsError(
+        "Unable to load placements. Please try again."
+      );
+    } finally {
+      setLoadingPlacements(false);
+    }
+  };
+
+  fetchPlacements();
+}, []);
 
   return (
     <div className="placements-page">
@@ -192,6 +264,11 @@ function Placements() {
         </div>
 
         <div className="placements-table-scroll">
+          {loadingPlacements && <p>Loading placements...</p>}
+
+{placementsError && (
+  <p style={{ color: "red" }}>{placementsError}</p>
+)}
           <table className="placements-table">
             <thead>
               <tr>
@@ -199,6 +276,7 @@ function Placements() {
                 <th>Registration No.</th>
                 <th>Organisation</th>
                 <th>Role</th>
+                <th>Supervisor</th>
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Status</th>
@@ -214,6 +292,12 @@ function Placements() {
                     <td>{placement.registrationNumber}</td>
                     <td>{placement.organisation}</td>
                     <td>{placement.role}</td>
+                    <td>
+  {supervisors.find(
+    (supervisor) =>
+      String(supervisor.id) === String(placement.supervisorId)
+  )?.full_name || "—"}
+</td>
                     <td>{placement.startDate || "—"}</td>
                     <td>{placement.endDate || "—"}</td>
                     <td>
@@ -247,7 +331,7 @@ function Placements() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8">
+                  <td colSpan="9">
                     <div className="placements-empty-state">
                       <BriefcaseBusiness size={36} />
                       <h3>No placements found</h3>
@@ -347,7 +431,44 @@ function Placements() {
                     required
                   />
                 </label>
+<label>
+  Assigned Supervisor
 
+  <select
+    name="supervisorId"
+    value={form.supervisorId}
+    onChange={handleChange}
+    required
+    disabled={loadingSupervisors || supervisors.length === 0}
+  >
+    <option value="">
+      {loadingSupervisors
+        ? "Loading supervisors..."
+        : "Select a supervisor"}
+    </option>
+
+    {supervisors.map((supervisor) => (
+      <option
+        key={supervisor.id}
+        value={supervisor.id}
+      >
+        {supervisor.full_name} ({supervisor.email})
+      </option>
+    ))}
+  </select>
+
+  {supervisorError && (
+    <small style={{ color: "red" }}>
+      {supervisorError}
+    </small>
+  )}
+
+  {!loadingSupervisors &&
+    !supervisorError &&
+    supervisors.length === 0 && (
+      <small>No active supervisors found.</small>
+    )}
+</label>
                 <label>
                   Start Date
                   <input

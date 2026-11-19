@@ -1,5 +1,10 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { logout } from "../api/auth";
+import client from "../api/client";
+import Supervisors from "./Supervisors";
+
 import {
   LayoutDashboard,
   Users,
@@ -15,7 +20,7 @@ import {
   ChevronDown,
   LogOut,
   X,
- UserRoundCog,
+  UserRoundCog,
 } from "lucide-react";
 
 import Students from "./Students";
@@ -25,10 +30,9 @@ import Placements from "./Placements";
 import Grades from "./Grades";
 import Reports from "./Reports";
 import Settings from "./Settings";
-import "./App.css";
 import StaffManagement from "./StaffManagement";
 
-
+import "./App.css";
 
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard },
@@ -39,27 +43,115 @@ const navigation = [
   { label: "Grades", icon: GraduationCap },
   { label: "Reports", icon: BarChart3 },
   { label: "Settings", icon: SettingsIcon },
+  { label: "Supervisors", icon: GraduationCap },
   { label: "Staff Management", icon: UserRoundCog },
 ];
-
-
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
-  
+  // Dashboard analytics
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState("");
+
+  const navigate = useNavigate();
+
+  // Fetch dashboard analytics from the backend
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setAnalyticsLoading(true);
+        setAnalyticsError("");
+
+        const response = await client.get("/reports/analytics/");
+
+        setAnalytics(response.data);
+      } catch (error) {
+        console.error("Failed to load dashboard analytics:", error);
+        setAnalyticsError("Unable to load dashboard statistics.");
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, []);
+
+  // Logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      navigate("/");
+    }
+  };
+
+  // Display the selected page
   function renderPage() {
     switch (activePage) {
       case "Dashboard":
         return (
           <>
             <div className="stats-grid">
-              <StatCard title="Total Students" value="—" icon={Users} color="purple" description="Awaiting database connection" />
-              <StatCard title="Organisations" value="—" icon={Building2} color="blue" description="Awaiting database connection" />
-              <StatCard title="Applications" value="—" icon={FileText} color="orange" description="Awaiting database connection" />
-              <StatCard title="Placements" value="—" icon={BriefcaseBusiness} color="green" description="Awaiting database connection" />
+              <StatCard
+                title="Total Students"
+                value={
+                  analyticsLoading
+                    ? "..."
+                    : analytics?.users?.students ?? "—"
+                }
+                icon={Users}
+                color="purple"
+                description="Registered students"
+              />
+
+              <StatCard
+                title="Supervisors"
+                value={
+                  analyticsLoading
+                    ? "..."
+                    : analytics?.users?.supervisors ?? "—"
+                }
+                icon={GraduationCap}
+                color="blue"
+                description="Registered supervisors"
+              />
+
+              <StatCard
+                title="Coordinators"
+                value={
+                  analyticsLoading
+                    ? "..."
+                    : analytics?.users?.coordinators ?? "—"
+                }
+                icon={UserRoundCog}
+                color="orange"
+                description="Registered coordinators"
+              />
+
+              <StatCard
+                title="Total Placements"
+                value={
+                  analyticsLoading
+                    ? "..."
+                    : analytics?.placements?.total ?? "—"
+                }
+                icon={BriefcaseBusiness}
+                color="green"
+                description="Recorded placements"
+              />
             </div>
+
+            {analyticsError && (
+              <div className="panel">
+                <p>{analyticsError}</p>
+              </div>
+            )}
 
             <div className="content-grid">
               <section className="panel overview-panel">
@@ -68,6 +160,7 @@ function App() {
                     <h3>System Overview</h3>
                     <p>Your administration workspace</p>
                   </div>
+
                   <span className="panel-icon">
                     <BarChart3 size={20} />
                   </span>
@@ -77,9 +170,21 @@ function App() {
                   <div className="empty-icon">
                     <LayoutDashboard size={27} />
                   </div>
-                  <h4>No data available yet</h4>
+
+                  <h4>
+                    {analyticsLoading
+                      ? "Loading dashboard information..."
+                      : analyticsError
+                        ? "Dashboard information unavailable"
+                        : "Dashboard statistics loaded"}
+                  </h4>
+
                   <p>
-                    Connect the backend and database to display your university records here.
+                    {analyticsLoading
+                      ? "Please wait while we retrieve your university statistics."
+                      : analyticsError
+                        ? "Please check your connection and try again later."
+                        : "Your university statistics are being retrieved from the UIMS backend."}
                   </p>
                 </div>
               </section>
@@ -95,6 +200,7 @@ function App() {
                 <div className="quick-links">
                   {navigation.slice(1, 5).map((item) => {
                     const Icon = item.icon;
+
                     return (
                       <button
                         key={item.label}
@@ -105,6 +211,7 @@ function App() {
                         <span className="quick-link-icon">
                           <Icon size={19} />
                         </span>
+
                         <span>{item.label}</span>
                         <span className="quick-arrow">→</span>
                       </button>
@@ -140,11 +247,15 @@ function App() {
       case "Staff Management":
         return <StaffManagement role="All" />;
 
+        case "Supervisors":
+  return <Supervisors />;
+
       default:
         return (
           <section className="panel section-placeholder">
             <h3>Page not found</h3>
             <p>Select a section from the navigation menu.</p>
+
             <button
               type="button"
               className="primary-button"
@@ -156,6 +267,7 @@ function App() {
         );
     }
   }
+
   return (
     <div className="app-layout">
       {sidebarOpen && (
@@ -170,10 +282,12 @@ function App() {
           <div className="brand-icon">
             <GraduationCap size={25} />
           </div>
+
           <div>
             <h2>UIMS Admin</h2>
             <span>Management Portal</span>
           </div>
+
           <button
             type="button"
             className="mobile-close"
@@ -212,10 +326,12 @@ function App() {
         <div className="sidebar-bottom">
           <div className="admin-profile">
             <div className="avatar">A</div>
+
             <div className="profile-info">
               <strong>Administrator</strong>
               <span>System Admin</span>
             </div>
+
             <LogOut size={17} />
           </div>
         </div>
@@ -254,11 +370,30 @@ function App() {
               <span className="notification-dot" />
             </button>
 
-            <button type="button" className="account-button">
-              <div className="avatar">A</div>
-              <span>Admin</span>
-              <ChevronDown size={16} />
-            </button>
+            <div className="account-menu-wrapper">
+              <button
+                type="button"
+                className="account-button"
+                onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+              >
+                <div className="avatar">A</div>
+                <span>Admin</span>
+                <ChevronDown size={16} />
+              </button>
+
+              {accountMenuOpen && (
+                <div className="account-dropdown">
+                  <button
+                    type="button"
+                    className="logout-menu-button"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={17} />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -271,6 +406,7 @@ function App() {
                 from one place.
               </p>
             </div>
+
             <span className="status-label">
               <span className="status-dot" />
               System ready
@@ -281,7 +417,13 @@ function App() {
 
           <footer className="page-footer">
             <span>UIMS Admin Portal</span>
-            <span>Database connection pending</span>
+            <span>
+              {analyticsLoading
+                ? "Loading dashboard data..."
+                : analyticsError
+                  ? "Dashboard data unavailable"
+                  : "Dashboard data connected"}
+            </span>
           </footer>
         </section>
       </main>
@@ -295,6 +437,7 @@ function StatCard({ title, value, icon: Icon, color, description }) {
       <div className={`stat-icon ${color}`}>
         <Icon size={22} strokeWidth={1.8} />
       </div>
+
       <p className="stat-title">{title}</p>
       <h3 className="stat-value">{value}</h3>
       <p className="stat-description">{description}</p>
