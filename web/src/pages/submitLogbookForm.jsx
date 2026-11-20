@@ -1,76 +1,74 @@
-import React, {useState} from "react";
+import React, { useState } from "react";
+import { toast } from "react-toastify";
 import client from "../api/client";
-import './submitLogbookForm.css'
-import {toast} from "react-toastify";
 
-export default function SubmitLogbookForm(onSuccess, onCancel){
-    const [formData, setFormData] = useState({
-        week_number: "",
-        content: ""
-    });
+export default function SubmitLogbookForm({ placementId, onSuccess, onCancel }) {
+    const [weekNumber, setWeekNumber] = useState("");
+    const [content, setContent] = useState("");
+    const [loading, setLoading] = useState(false);
 
-
-    const [loading, setLoading]= useState(false);
-    const [error, setError]=useState(null);
-
-    const handleSubmit = async(e)=>{
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!weekNumber || !content) {
+            toast.error("Please fill in all required fields.");
+            return;
+        }
+
         setLoading(true);
-
-        try{
-
-            // Converts week_number to an integer before sending
-            const payload = {
-                ...formData,
-                week_number: parseInt(formData.week_number, 10),
-                content: formData.content,
-                placement: placementId // Default placement as required by backend schema
-
-            };
-            const response = await client.post("/logbooks/", payload);
+        try {
+            await client.post('/logbooks/', {
+                placement: placementId,
+                week_number: Number(weekNumber),
+                content: content.trim()
+            });
             toast.success("Logbook entry submitted successfully!");
             onSuccess();
-        }catch(err){
-
-        }finally{
+        } catch (error) {
+            console.error("Error submitting logbook:", error);
+            toast.error(error.response?.data?.detail || "Failed to submit logbook entry.");
+        } finally {
             setLoading(false);
         }
-    }
+    };
 
-    return(
-       <div className="modal-backdrop">
-            <div className="modal-card">
-                <h3>Submit Weekly Logbook</h3>
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label>Week Number</label>
-                        <input 
-                            type="number" 
-                            min="1"
-                            placeholder="e.g. 1, 2, 3..."
-                            value={formData.week_number}
-                            onChange={(e) => setFormData({...formData, week_number: e.target.value})}
-                            required 
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Activities / Content</label>
-                        <textarea 
-                            rows="4"
-                            placeholder="Describe what you worked on this week..."
-                            value={formData.content}
-                            onChange={(e) => setFormData({...formData, content: e.target.value})}
-                            required
-                        ></textarea>
-                    </div>
-                    <div className="form-actions">
-                        <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
-                        <button type="submit" className="btn-primary" disabled={loading}>
-                            {loading ? "Submitting..." : "Submit Entry"}
-                        </button>
-                    </div>
-                </form>
+    return (
+        <div className="submit-logbook-page">
+            <div className="section-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2>Submit Weekly Logbook</h2>
+                <button type="button" className="cancel-btn" onClick={onCancel} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
             </div>
+            <form onSubmit={handleSubmit} className="submit-logbook-form">
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Week Number</label>
+                    <input 
+                        type="number" 
+                        value={weekNumber} 
+                        onChange={(e) => setWeekNumber(e.target.value)} 
+                        placeholder="e.g. 1, 2, 3..." 
+                        required 
+                        style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}
+                    />
+                </div>
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Activities & Content</label>
+                    <textarea 
+                        value={content} 
+                        onChange={(e) => setContent(e.target.value)} 
+                        placeholder="Describe tasks undertaken, skills acquired, etc..." 
+                        rows="5"
+                        required 
+                        style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}
+                    />
+                </div>
+                <div className="form-actions" style={{ display: 'flex', gap: '10px' }}>
+                    <button type="submit" className="submit-placement-btn" disabled={loading}>
+                        {loading ? "Submitting..." : "Submit Logbook"}
+                    </button>
+                    <button type="button" className="cancel-btn" onClick={onCancel} style={{ padding: '10px 20px', borderRadius: '6px', border: '1px solid #ccc', background: '#f5f5f5', cursor: 'pointer' }}>
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     );
 }
