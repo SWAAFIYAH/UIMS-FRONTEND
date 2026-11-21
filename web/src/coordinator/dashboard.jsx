@@ -566,12 +566,15 @@ const mapLogbook = (entry) => ({
   status: entry.status || entry.logbook_status || "—",
 });
 const mapEvaluation = (evaluation) => ({
+  ...evaluation,
   id: evaluation.id ?? evaluation.placement_id ?? `${evaluation.student_id ?? evaluation.student_name ?? "evaluation"}-${evaluation.company ?? evaluation.company_name ?? ""}`,
+  placementId: evaluation.placement_id ?? evaluation.id,
   student: evaluation.student_name || evaluation.student || "—",
   company: evaluation.company_name || evaluation.company || "—",
   supervisor: evaluation.supervisor_name || evaluation.supervisor || "—",
   status: evaluation.status || evaluation.evaluation_status || evaluation.overall_status || "Unknown",
   submitted: evaluation.submitted_at || evaluation.submission_date || evaluation.created_at || "—",
+  readyToFinalise: evaluation.ready_to_finalise === true,
 });
 const getSupervisorId = (supervisor) => {
   const rawId = supervisor.id ?? supervisor.supervisor_id ?? supervisor.user_id ?? supervisor.pk;
@@ -688,6 +691,27 @@ export default function OukDashboard({
   const [evals, setEvals] = useState(initialEvaluations);
   const timer = useRef();
   const sessionExpiredRef = useRef(false);
+
+  useEffect(() => {
+    if (!evals.length) return;
+    setGrades((current) => {
+      const reviewGrades = evals
+        .filter((evaluation) => evaluation.readyToFinalise || evaluation.company_score != null || evaluation.supervisor_score != null)
+        .map((evaluation) => ({
+          placement_id: evaluation.placementId,
+          student_id: evaluation.student_id,
+          student_name: evaluation.student,
+          company: evaluation.company,
+          supervisor: evaluation.supervisor,
+          company_score: evaluation.company_score,
+          supervisor_score: evaluation.supervisor_score,
+          final_score: evaluation.final_score,
+          letter_grade: evaluation.letter_grade,
+          finalised_at: evaluation.finalised_at,
+        }));
+      return reviewGrades.length ? reviewGrades : current;
+    });
+  }, [evals]);
 
   useEffect(() => {
     let cancelled = false;
@@ -952,6 +976,17 @@ export default function OukDashboard({
     }
   };
   const finaliseGrade = async (grade) => {
+    if (grade.placement_id) {
+      try {
+        await client.post(`/evaluations/${grade.placement_id}/finalise/`);
+        toast(`Grade finalised for ${grade.student_name}.`);
+        refreshDataRef.current?.();
+      } catch (error) {
+        console.error("Could not finalise grade:", error);
+        toast(getApiErrorMessage(error, "finalise this grade"));
+      }
+      return;
+    }
     const matches = placements.filter((placement) =>
       placement.studentId === grade.student_id &&
       placement.company.toLowerCase() === String(grade.company).toLowerCase()
@@ -1181,12 +1216,28 @@ export default function OukDashboard({
             <section>
               <div className="header"><div><h1>Evaluation Oversight</h1><div className="muted">Track internship evaluation progress.</div></div></div>
               <div className="card">
-                <Table heads={["Student", "Company", "Supervisor", "Status", "Submitted"]}>
+                <Table heads={["Student", "Company", "Supervisor", "Status", "Submitted", "Action"]}>
                   {evals.filter((x) => match(x.student, x.company, x.supervisor, x.status)).map((x) => (
                     <tr key={x.id}>
                       <td>{x.student}</td><td>{x.company}</td><td>{x.supervisor || "—"}</td>
                       <td><Status cls={statusClass(x.status)}>{x.status}</Status></td>
                       <td>{x.submitted || "—"}</td>
+                      <td>
+                        {x.readyToFinalise && x.placementId
+                          ? <button className="action" type="button" onClick={() => finaliseGrade({
+                              placement_id: x.placementId,
+                              student_name: x.student,
+                              student_id: x.student_id,
+                              company: x.company,
+                              supervisor: x.supervisor,
+                              company_score: x.company_score,
+                              supervisor_score: x.supervisor_score,
+                              final_score: x.final_score,
+                              letter_grade: x.letter_grade,
+                              finalised_at: x.finalised_at,
+                            })}>Finalise</button>
+                          : <span className="muted">{x.readyToFinalise ? "Placement unavailable" : "Not ready"}</span>}
+                      </td>
                     </tr>
                   ))}
                 </Table>

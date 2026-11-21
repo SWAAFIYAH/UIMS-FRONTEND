@@ -291,8 +291,10 @@ export default function StudentDashboard() {
                                     <div className="logbook-row" key={evaluation.id ?? index}>
                                         <span className="log-date">{evaluation.company || evaluation.company_name || placement?.company_name || "Evaluation"}</span>
                                         <span className="log-desc">
-                                            Final score: {evaluation.final_score ?? "—"} · Grade: {evaluation.letter_grade || "Pending"}
-                                            {evaluation.coordinator_remarks ? ` · ${evaluation.coordinator_remarks}` : ""}
+                                            Company: {evaluation.company_score ?? "—"} · Supervisor: {evaluation.supervisor_score ?? "—"} · Final score: {evaluation.final_score ?? "—"} · Grade: {evaluation.letter_grade || "Pending"}
+                                            {evaluation.company_remarks ? ` · Company remarks: ${evaluation.company_remarks}` : ""}
+                                            {!evaluation.company_remarks && evaluation.remarks ? ` · Company remarks: ${evaluation.remarks}` : ""}
+                                            {evaluation.coordinator_remarks ? ` · Coordinator remarks: ${evaluation.coordinator_remarks}` : ""}
                                         </span>
                                         <span className="log-status">{evaluation.finalised_at ? "Finalised" : "In progress"}</span>
                                     </div>

@@ -338,12 +338,18 @@ const css = `
 }
 
 .sd .formgroup input,
-.sd .formgroup select {
+.sd .formgroup select,
+.sd .formgroup textarea {
   width: 100%;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--card);
+}
+
+.sd .formgroup textarea {
+  min-height: 96px;
+  resize: vertical;
 }
 
 .sd .toast {
@@ -625,11 +631,25 @@ const mapAssignedStudent = (item, index) => {
 
 export function AssignedStudentsDashboard() {
   const [students, setStudents] = useState([]);
+  const [companyEvaluations, setCompanyEvaluations] = useState([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [evaluationModal, setEvaluationModal] = useState(null);
+  const [evaluationForm, setEvaluationForm] = useState({ company_score: "", remarks: "" });
+  const [savingEvaluation, setSavingEvaluation] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastShow, setToastShow] = useState(false);
   const loadRef = useRef(null);
+  const toastTimer = useRef(null);
+
+  const toast = (message) => {
+    setToastMsg(message);
+    setToastShow(true);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastShow(false), 2800);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -642,16 +662,36 @@ export function AssignedStudentsDashboard() {
       setRefreshing(true);
 
       try {
-        const { data } = await client.get("/logbooks/students/", {
-          signal: controller.signal,
-          timeout: 30000,
-        });
-        const results = Array.isArray(data) ? data : data?.results;
+        const [studentsResult, evaluationsResult] = await Promise.allSettled([
+          client.get("/logbooks/students/", {
+            signal: controller.signal,
+            timeout: 30000,
+          }),
+          client.get("/evaluations/company/", {
+            signal: controller.signal,
+            timeout: 30000,
+          }),
+        ]);
+        if (studentsResult.status !== "fulfilled") {
+          throw studentsResult.reason;
+        }
+        const results = Array.isArray(studentsResult.value.data)
+          ? studentsResult.value.data
+          : studentsResult.value.data?.results;
         if (!Array.isArray(results)) {
           throw new Error("Unexpected assigned-students response: expected a results array.");
         }
+        const evaluations =
+          evaluationsResult.status === "fulfilled"
+            ? (
+                Array.isArray(evaluationsResult.value.data)
+                  ? evaluationsResult.value.data
+                  : (Array.isArray(evaluationsResult.value.data?.results) ? evaluationsResult.value.data.results : [])
+              )
+            : [];
         if (!cancelled) {
           setStudents(results.map(mapAssignedStudent));
+          setCompanyEvaluations(evaluations);
           setError("");
         }
       } catch (requestError) {
@@ -686,9 +726,60 @@ export function AssignedStudentsDashboard() {
       cancelled = true;
       controller.abort();
       window.clearInterval(intervalId);
+      clearTimeout(toastTimer.current);
       loadRef.current = null;
     };
   }, []);
+
+  const openCompanyEvaluation = (student) => {
+    const existing = companyEvaluations.find((evaluation) =>
+      Number(evaluation.placement_id ?? evaluation.placement) === Number(student.id)
+    );
+    if (existing) {
+      toast("A company evaluation has already been submitted for this student.");
+      return;
+    }
+    setEvaluationForm({ company_score: "", remarks: "" });
+    setEvaluationModal(student);
+  };
+
+  const submitCompanyEvaluation = async () => {
+    if (!evaluationModal) return;
+    const score = Number(evaluationForm.company_score);
+    if (!Number.isFinite(score) || score < 0 || score > 40) {
+      toast("Enter a company score from 0 to 40.");
+      return;
+    }
+
+    setSavingEvaluation(true);
+    try {
+      await client.post("/evaluations/company/", {
+        placement_id: evaluationModal.id,
+        company_score: score,
+        remarks: evaluationForm.remarks.trim(),
+      });
+      setCompanyEvaluations((evaluations) => [
+        ...evaluations,
+        { placement_id: evaluationModal.id, company_score: score, remarks: evaluationForm.remarks.trim() },
+      ]);
+      setEvaluationModal(null);
+      toast("Company evaluation submitted successfully.");
+    } catch (requestError) {
+      console.error("Could not submit company evaluation:", requestError);
+      const status = requestError.response?.status;
+      toast(
+        status === 401
+          ? "Your session may have expired. Please sign in again."
+          : status === 403
+            ? "You do not have permission to submit this evaluation."
+            : requestError.response?.data?.detail ||
+              requestError.response?.data?.error ||
+              "Could not submit the company evaluation."
+      );
+    } finally {
+      setSavingEvaluation(false);
+    }
+  };
 
   const filteredStudents = students.filter((student) =>
     [student.student, student.studentId, student.program, student.company, student.status]
@@ -750,35 +841,117 @@ export function AssignedStudentsDashboard() {
             <table>
               <thead>
                 <tr>
-                  {["Student", "Student ID", "Program", "Company", "Placement Status", "Internship Dates"].map((heading) => (
+                  {["Student", "Student ID", "Program", "Company", "Placement Status", "Internship Dates", "Evaluation"].map((heading) => (
                     <th key={heading}>{heading}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="muted" style={{ textAlign: "center", padding: 32 }}>Loading assigned students…</td></tr>
+                  <tr><td colSpan={7} className="muted" style={{ textAlign: "center", padding: 32 }}>Loading assigned students…</td></tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="muted" style={{ textAlign: "center", padding: 32 }}>
+                    <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 32 }}>
                       {error ? "Assigned students could not be loaded." : students.length ? "No students match your search." : "No students have been assigned to you yet."}
                     </td>
                   </tr>
-                ) : filteredStudents.map((student) => (
-                  <tr key={student.id}>
-                    <td><b>{student.student}</b></td>
-                    <td>{student.studentId || "—"}</td>
-                    <td>{student.program}</td>
-                    <td>{student.company}</td>
-                    <td>{student.status}</td>
-                    <td>{[student.start, student.end].filter(Boolean).join(" - ") || "—"}</td>
-                  </tr>
-                ))}
+                ) : filteredStudents.map((student) => {
+                  const evaluated = companyEvaluations.some((evaluation) =>
+                    Number(evaluation.placement_id ?? evaluation.placement) === Number(student.id)
+                  );
+                  return (
+                    <tr key={student.id}>
+                      <td><b>{student.student}</b></td>
+                      <td>{student.studentId || "—"}</td>
+                      <td>{student.program}</td>
+                      <td>{student.company}</td>
+                      <td>{student.status}</td>
+                      <td>{[student.start, student.end].filter(Boolean).join(" - ") || "—"}</td>
+                      <td>
+                        <button
+                          className="action"
+                          type="button"
+                          disabled={evaluated}
+                          onClick={() => openCompanyEvaluation(student)}
+                        >
+                          {evaluated ? "Submitted" : "Enter Evaluation"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       </main>
+
+      {evaluationModal && (
+        <Modal
+          title={`Company Evaluation - ${evaluationModal.student}`}
+          onClose={() => !savingEvaluation && setEvaluationModal(null)}
+          footer={
+            <>
+              <button
+                className="btn secondary"
+                type="button"
+                disabled={savingEvaluation}
+                onClick={() => setEvaluationModal(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                type="button"
+                disabled={savingEvaluation}
+                onClick={submitCompanyEvaluation}
+              >
+                {savingEvaluation ? "Submitting…" : "Submit Evaluation"}
+              </button>
+            </>
+          }
+        >
+          <div className="details">
+            <div className="detail">
+              <span className="detail-label">Company</span>
+              <b>{evaluationModal.company}</b>
+            </div>
+            <div className="detail">
+              <span className="detail-label">Student ID</span>
+              <b>{evaluationModal.studentId || "—"}</b>
+            </div>
+          </div>
+          <div className="formgroup">
+            <label htmlFor="company-evaluation-score">Company Score (0-40)</label>
+            <input
+              id="company-evaluation-score"
+              type="number"
+              min="0"
+              max="40"
+              step="0.01"
+              value={evaluationForm.company_score}
+              onChange={(event) => setEvaluationForm((form) => ({
+                ...form,
+                company_score: event.target.value,
+              }))}
+            />
+          </div>
+          <div className="formgroup">
+            <label htmlFor="company-evaluation-remarks">Remarks</label>
+            <textarea
+              id="company-evaluation-remarks"
+              value={evaluationForm.remarks}
+              onChange={(event) => setEvaluationForm((form) => ({
+                ...form,
+                remarks: event.target.value,
+              }))}
+              placeholder="Enter the employer's comments or evaluation notes."
+            />
+          </div>
+        </Modal>
+      )}
+
+      <div className={`toast ${toastShow ? "show" : ""}`}>{toastMsg}</div>
     </div>
   );
 }
