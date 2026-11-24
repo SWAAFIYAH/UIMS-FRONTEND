@@ -689,6 +689,10 @@ export default function OukDashboard({
   const [grades, setGrades] = useState(initialGrades);
   const [logs, setLogs] = useState(initialLogbooks);
   const [evals, setEvals] = useState(initialEvaluations);
+  const [selectedLogbook, setSelectedLogbook] = useState(null);
+  const [logbookDetails, setLogbookDetails] = useState(null);
+  const [logbookDetailsError, setLogbookDetailsError] = useState("");
+  const [loadingLogbookDetails, setLoadingLogbookDetails] = useState(false);
   const timer = useRef();
   const sessionExpiredRef = useRef(false);
 
@@ -861,6 +865,29 @@ export default function OukDashboard({
   };
   const go = (p) => { setPage(p); setMenuOpen(false); window.scrollTo(0, 0); };
   const match = (...vals) => vals.filter((v) => v != null).join(" ").toLowerCase().includes(query.toLowerCase());
+  const openLogbook = async (entry) => {
+    setSelectedLogbook(entry);
+    setLogbookDetails(null);
+    setLogbookDetailsError("");
+    setModal("logbook");
+
+    const entryId = Number(entry.id);
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+      setLogbookDetailsError("The logbook summary does not include an entry ID, so its content cannot be opened.");
+      return;
+    }
+
+    setLoadingLogbookDetails(true);
+    try {
+      const { data } = await client.get(`/logbooks/${entryId}/`);
+      setLogbookDetails(data);
+    } catch (error) {
+      console.error("Could not load logbook entry:", error);
+      setLogbookDetailsError(getApiErrorMessage(error, "load the logbook"));
+    } finally {
+      setLoadingLogbookDetails(false);
+    }
+  };
 
   const pendingList = placements.filter((x) => x.status === "pending");
   const stats = {
@@ -1200,11 +1227,16 @@ export default function OukDashboard({
             <section>
               <div className="header"><div><h1>Logbook Oversight</h1><div className="muted">Monitor student logbook compliance.</div></div>              </div>
               <div className="card">
-                <Table heads={["Student", "Week", "Submitted", "Supervisor", "Status"]}>
+                <Table heads={["Student", "Week", "Submitted", "Supervisor", "Status", "Action"]}>
                   {logs.filter((x) => match(x.student, x.week, x.supervisor, x.status)).map((x) => (
                     <tr key={x.id}>
                       <td>{x.student}</td><td>{x.week}</td><td>{x.submitted || "—"}</td><td>{x.supervisor || "—"}</td>
                       <td><Status cls={logClass(x.status)}>{x.status}</Status></td>
+                      <td>
+                        {Number.isInteger(Number(x.id)) && Number(x.id) > 0
+                          ? <button className="action" type="button" onClick={() => openLogbook(x)}>View</button>
+                          : <span className="muted">Unavailable</span>}
+                      </td>
                     </tr>
                   ))}
                 </Table>
@@ -1493,6 +1525,36 @@ export default function OukDashboard({
             <label htmlFor="semail">Email</label>
             <input id="semail" type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
+        </Modal>
+      )}
+
+      {modal === "logbook" && selectedLogbook && (
+        <Modal
+          title={`Logbook Entry${selectedLogbook.week ? ` — Week ${selectedLogbook.week}` : ""}`}
+          onClose={() => setModal(null)}
+          footer={<button className="btn secondary" type="button" onClick={() => setModal(null)}>Close</button>}
+        >
+          <div className="details">
+            {[["Student", selectedLogbook.student], ["Week", selectedLogbook.week], ["Submitted", selectedLogbook.submitted], ["Status", selectedLogbook.status]].map(([label, value]) => (
+              <div className="detail" key={label}><span className="detail-label">{label}</span><b>{value || "—"}</b></div>
+            ))}
+          </div>
+          {loadingLogbookDetails && <p role="status">Loading logbook entry…</p>}
+          {logbookDetailsError && <p role="alert" className="muted">{logbookDetailsError}</p>}
+          {logbookDetails && (
+            <>
+              <div className="formgroup">
+                <label>Submitted content</label>
+                <p style={{ whiteSpace: "pre-wrap" }}>{logbookDetails.content || "No content was provided."}</p>
+              </div>
+              {logbookDetails.feedback && (
+                <div className="formgroup">
+                  <label>Supervisor feedback</label>
+                  <p style={{ whiteSpace: "pre-wrap" }}>{logbookDetails.feedback}</p>
+                </div>
+              )}
+            </>
+          )}
         </Modal>
       )}
 
