@@ -5,6 +5,7 @@ import StudentDashboard from "./pages/studentDashboard";
 import SubmitLogbookForm from "./pages/submitLogbookForm";
 import SubmitPlacementForm from "./pages/submitPlacementForm";
 import VerifyEmail from "./pages/verifyEmail";
+import SupervisorDashboard from "../supervisor/SupervisorDashboard"; // Added supervisor import
 import { Routes, Route } from 'react-router-dom';
 import OukDashboard from "./coordinator/dashboard";
 import { AssignedStudentsDashboard } from "./coordinator/supervisor-dash";
@@ -17,8 +18,8 @@ function App() {
       <Route path="/" element={<Login />} />
       <Route path="/login" element={<Login />} />
 
-      {/*signup page*/}
-      <Route path="/signup" element={<Signup/>}/>
+      {/* signup page */}
+      <Route path="/signup" element={<Signup />} />
 
       {/* The email verification page */}
       <Route path="/verify-email" element={<VerifyEmail />} />
@@ -37,6 +38,7 @@ function App() {
 
       {/* Logbook pages */}
       <Route path="/submit-logbook" element={<SubmitLogbookForm />} />
+      <Route path="/supervisor" element={<SupervisorDashboard />} />
     </Routes>
   );
 }
