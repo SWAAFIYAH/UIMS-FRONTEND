@@ -33,7 +33,7 @@ export default function Login(){
                     navigate("/student-dashboard");
                 } 
                 else if (response.user.role === "supervisor") {
-                    navigate("/supervisor-dashboard");
+                    navigate("/supervisor");
                 }
                 else if (response.user.role === "coordinator") {
                     navigate("/coordinator-dashboard");

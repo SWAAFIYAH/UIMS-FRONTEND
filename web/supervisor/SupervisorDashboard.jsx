@@ -1,33 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import './SupervisorDashboard.css';
 import { 
   fetchAssignedStudents, 
   fetchStudentLogbookEntries, 
   fetchLogbookEntry,
-  fetchLogbooksOverview,
   submitLogbookFeedback, 
+  updateLogbookFeedback,
   fetchFieldVisits, 
   createFieldVisit,
+  fetchCompanyEvaluations,
+  submitCompanyEvaluation,
+  fetchSupervisorEvaluations,
   submitSupervisorEvaluation,
-  finaliseStudentEvaluation,
+  finalisePlacementEvaluation,
   fetchMyWorkloadReport,
-  fetchPlacements,        // <-- ADDED
-  approvePlacement,       // <-- ADDED
-  rejectPlacement         // <-- ADDED
 } from '../src/api/supervisorApi';
+
+const createRubricScores = () => [
+  { id: 1, title: "Technical & Domain Competency", description: "Application of computing concepts and execution of assigned tasks.", score: null },
+  { id: 2, title: "Professionalism & Work Ethic", description: "Punctuality, communication skills, and professional integrity.", score: null },
+  { id: 3, title: "Problem Solving & Initiative", description: "Ability to analyze technical challenges and propose solutions.", score: null },
+  { id: 4, title: "Adaptability & Team Collaboration", description: "Integration into technical teams and response to feedback.", score: null },
+];
+
+const getPlacementId = (evaluation) => {
+  const placement = evaluation?.placement;
+  return Number(evaluation?.placement_id ?? (typeof placement === 'object' ? placement?.id : placement));
+};
 
 function SupervisorDashboard() {
   // Navigation tab state: 'dashboard' | 'placements' | 'logbooks' | 'visits' | 'students' | 'assessment' | 'reports'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   // Data States connected to Backend
   const [studentsList, setStudentsList] = useState([]);
-  const [placementsList, setPlacementsList] = useState([]); // <-- ADDED
+  const [placementsList, setPlacementsList] = useState([]);
   const [logbooksList, setLogbooksList] = useState([]);
   const [visitsList, setVisitsList] = useState([]);
   const [workloadReport, setWorkloadReport] = useState(null);
+  const [companyEvaluations, setCompanyEvaluations] = useState([]);
+  const [supervisorEvaluations, setSupervisorEvaluations] = useState([]);
+  const [finalisedPlacements, setFinalisedPlacements] = useState(() => new Set());
 
   // Accessibility States
   const [showA11yPanel, setShowA11yPanel] = useState(false);
@@ -36,33 +52,26 @@ function SupervisorDashboard() {
   const [isDyslexicFont, setIsDyslexicFont] = useState(false);
 
   // Modals state
-  const [showPlacementModal, setShowPlacementModal] = useState(false); // <-- ADDED
-  const [selectedPlacement, setSelectedPlacement] = useState(null);   // <-- ADDED
-  const [placementRemarks, setPlacementRemarks] = useState('');       // <-- ADDED
-
   const [showLogbookModal, setShowLogbookModal] = useState(false);
   const [selectedLogbook, setSelectedLogbook] = useState(null);
   const [loadingLogbook, setLoadingLogbook] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
-  const [reviewDecision, setReviewDecision] = useState('APPROVED');
 
   const [showVisitModal, setShowVisitModal] = useState(false);
   const [visitPlacementId, setVisitPlacementId] = useState('');
   const [visitDate, setVisitDate] = useState('');
-  const [visitOutcome, setVisitOutcome] = useState('SATISFACTORY');
+  const [visitOutcome, setVisitOutcome] = useState('satisfactory');
   const [visitNotes, setVisitNotes] = useState('');
 
   // Assessment State
   const [currentStudent, setCurrentStudent] = useState(null);
-  const [rubricScores, setRubricScores] = useState([
-    { id: 1, title: "Weekly Logbook Quality & Reflective Rigor", description: "Documentation of engineering tasks and problem-solving analysis.", score: 9 },
-    { id: 2, title: "Technical & Domain Competency", description: "Application of computing concepts and execution of tasks.", score: 9 },
-    { id: 3, title: "Professionalism & Work Ethic", description: "Punctuality, communication skills, and professional integrity.", score: 10 },
-    { id: 4, title: "Problem Solving & Initiative", description: "Ability to analyze technical hurdles and propose solutions.", score: 9 },
-    { id: 5, title: "Adaptability & Team Collaboration", description: "Integration into technical teams and reception to feedback.", score: 9 },
-    { id: 6, title: "Final Technical Report & Defense", description: "Overall technical synthesis and clarity of final deliverables.", score: 9 }
-  ]);
+  const [rubricScores, setRubricScores] = useState(createRubricScores);
   const [remarks, setRemarks] = useState('');
+  const [companyEvaluationForm, setCompanyEvaluationForm] = useState({ company_score: '', remarks: '' });
+  const [savingCompanyEvaluation, setSavingCompanyEvaluation] = useState(false);
+  const [savingSupervisorEvaluation, setSavingSupervisorEvaluation] = useState(false);
+  const [finalisingEvaluation, setFinalisingEvaluation] = useState(false);
+  const [evaluationError, setEvaluationError] = useState('');
 
   // Apply accessibility classes directly to document body
   useEffect(() => {
@@ -82,41 +91,56 @@ function SupervisorDashboard() {
     async function loadData() {
       try {
         setLoading(true);
-        const studentsData = await fetchAssignedStudents();
-        setStudentsList(studentsData || []);
+        setLoadError('');
+        const [
+          assignedStudentRows,
+          reportData,
+          visitsData,
+          companyEvaluationRows,
+          supervisorEvaluationRows,
+        ] = await Promise.all([
+          fetchAssignedStudents(),
+          fetchMyWorkloadReport(),
+          fetchFieldVisits(),
+          fetchCompanyEvaluations(),
+          fetchSupervisorEvaluations(),
+        ]);
+        const assignedStudentsByPlacement = new Map(
+          assignedStudentRows.map((student) => [Number(student.placement_id), student])
+        );
+        const placementRows = reportData.results.map((placement) => ({
+          ...(assignedStudentsByPlacement.get(placement.placement_id) || {}),
+          ...placement,
+          id: placement.placement_id,
+          name: placement.student_name,
+          placement_id: placement.placement_id,
+          status: placement.placement_status,
+        }));
+        const logbookResponses = await Promise.all(
+          placementRows.map((placement) => fetchStudentLogbookEntries(placement.placement_id))
+        );
 
-        try {
-          const placementsData = await fetchPlacements();
-          setPlacementsList(placementsData || []);
-        } catch (pErr) {
-          console.warn("Placements API error or unpopulated:", pErr);
-        }
-
-        if (studentsData && studentsData.length > 0) {
-          setCurrentStudent(studentsData[0]);
-          const initialLogbooks = await fetchStudentLogbookEntries(studentsData[0].placement_id || studentsData[0].id);
-          setLogbooksList(initialLogbooks || []);
-        } else {
-          try {
-            const overview = await fetchLogbooksOverview();
-            setLogbooksList(overview || []);
-          } catch (oErr) {
-            console.warn("Logbook overview fallback returned error:", oErr);
-          }
-        }
-
-        const visitsData = await fetchFieldVisits();
-        setVisitsList(visitsData || []);
-
-        try {
-          const reportData = await fetchMyWorkloadReport();
-          setWorkloadReport(reportData);
-        } catch (rErr) {
-          console.warn("Workload report endpoint returned error or unpopulated:", rErr);
-        }
-
+        setStudentsList(placementRows);
+        setPlacementsList(placementRows);
+        setCurrentStudent(placementRows[0] || null);
+        setWorkloadReport(reportData);
+        setVisitsList(visitsData);
+        setLogbooksList(logbookResponses.flat());
+        setCompanyEvaluations(companyEvaluationRows);
+        setSupervisorEvaluations(supervisorEvaluationRows);
+        setFinalisedPlacements(new Set(
+          [...companyEvaluationRows, ...supervisorEvaluationRows]
+            .filter((evaluation) => evaluation.finalised_at || evaluation.is_finalised || evaluation.finalised)
+            .map(getPlacementId)
+            .filter((placementId) => Number.isInteger(placementId) && placementId > 0)
+        ));
       } catch (err) {
         console.error("Failed to load initial data from backend API:", err);
+        setLoadError(
+          err.response?.data?.detail
+            || err.message
+            || "Could not load supervisor dashboard data."
+        );
       } finally {
         setLoading(false);
       }
@@ -126,18 +150,41 @@ function SupervisorDashboard() {
   }, []);
 
   // Dynamic Calculations from Backend State
-  const atRiskStudents = studentsList.filter(s => s.risk_status === 'AT_RISK' || s.is_at_risk === true);
-  const pendingLogbooks = logbooksList.filter(l => l.status === 'PENDING');
-  const pendingPlacements = placementsList.filter(p => (p.status || '').toUpperCase() === 'PENDING'); // <-- ADDED
+  const atRiskStudents = studentsList.filter(
+    (student) => student.risk_status?.toLowerCase() === 'at_risk' || student.is_at_risk === true
+  );
+  const pendingLogbooks = logbooksList.filter(l => l.status === 'submitted');
+  const pendingPlacements = placementsList.filter(p => p.status === 'pending');
 
   // Scorecard Calculations
-  let totalRawScore = rubricScores.reduce((sum, item) => sum + item.score, 0);
-  let calculatedPercent = ((totalRawScore / 60) * 100).toFixed(1);
-  let finalGrade = "F (Fail)";
-  if (calculatedPercent >= 70) finalGrade = "A (First Class)";
-  else if (calculatedPercent >= 60) finalGrade = "B (Upper Second)";
-  else if (calculatedPercent >= 50) finalGrade = "C (Lower Second)";
-  else if (calculatedPercent >= 40) finalGrade = "D (Pass)";
+  let totalRawScore = rubricScores.reduce((sum, item) => sum + (item.score ?? 0), 0);
+  let calculatedPercent = ((totalRawScore / 40) * 100).toFixed(1);
+  const completedRubricItems = rubricScores.filter((item) => item.score !== null).length;
+  const selectedPlacementId = Number(currentStudent?.placement_id || currentStudent?.id);
+  const companyEvaluation = companyEvaluations.find(
+    (evaluation) => getPlacementId(evaluation) === selectedPlacementId
+  );
+  const supervisorEvaluation = supervisorEvaluations.find(
+    (evaluation) => getPlacementId(evaluation) === selectedPlacementId
+  );
+  const companyAssessmentSubmitted = Boolean(companyEvaluation);
+  const schoolAssessmentSubmitted = Boolean(supervisorEvaluation);
+  const selectedPlacementFinalised = finalisedPlacements.has(selectedPlacementId);
+  const submittedSchoolScore = Number(
+    supervisorEvaluation?.supervisor_score ?? supervisorEvaluation?.raw_score
+  );
+  const displayedSchoolScore = schoolAssessmentSubmitted && Number.isFinite(submittedSchoolScore)
+    ? submittedSchoolScore
+    : totalRawScore;
+  const displayedSchoolPercent = ((displayedSchoolScore / 40) * 100).toFixed(1);
+  let finalGrade = supervisorEvaluation?.grade || "F (Fail)";
+  const gradePercent = schoolAssessmentSubmitted ? displayedSchoolPercent : calculatedPercent;
+  if (!supervisorEvaluation?.grade) {
+    if (gradePercent >= 70) finalGrade = "A (First Class)";
+    else if (gradePercent >= 60) finalGrade = "B (Upper Second)";
+    else if (gradePercent >= 50) finalGrade = "C (Lower Second)";
+    else if (gradePercent >= 40) finalGrade = "D (Pass)";
+  }
 
   // Handlers
   function handleTabChange(tabName) {
@@ -145,48 +192,12 @@ function SupervisorDashboard() {
   }
 
   function updateScore(id, newScore) {
-    setRubricScores(rubricScores.map(item => item.id === id ? { ...item, score: newScore } : item));
-  }
-
-  // Placement Modal Handlers
-  function openPlacementModal(placement) {
-    setSelectedPlacement(placement);
-    setPlacementRemarks('');
-    setShowPlacementModal(true);
-  }
-
-  async function handleApprovePlacement() {
-    if (!selectedPlacement) return;
-    try {
-      await approvePlacement(selectedPlacement.id, { remarks: placementRemarks });
-      alert("Placement approved successfully!");
-      setShowPlacementModal(false);
-      const updated = await fetchPlacements();
-      setPlacementsList(updated || []);
-    } catch (err) {
-      console.error("Error approving placement:", err);
-      alert("Failed to approve placement.");
-    }
-  }
-
-  async function handleRejectPlacement() {
-    if (!selectedPlacement) return;
-    try {
-      await rejectPlacement(selectedPlacement.id, { remarks: placementRemarks });
-      alert("Placement rejected/sent back for revision.");
-      setShowPlacementModal(false);
-      const updated = await fetchPlacements();
-      setPlacementsList(updated || []);
-    } catch (err) {
-      console.error("Error rejecting placement:", err);
-      alert("Failed to reject placement.");
-    }
+    setRubricScores((scores) => scores.map(item => item.id === id ? { ...item, score: newScore } : item));
   }
 
   async function openLogbookModal(logbook) {
     setSelectedLogbook(logbook);
     setFeedbackText('');
-    setReviewDecision('APPROVED');
     setShowLogbookModal(true);
     setLoadingLogbook(true);
 
@@ -196,7 +207,7 @@ function SupervisorDashboard() {
     } catch (err) {
       console.error("Error fetching logbook details:", err);
       setShowLogbookModal(false);
-      alert("Failed to load the full logbook entry.");
+      alert(err.response?.data?.detail || err.message || "Failed to load the full logbook entry.");
     } finally {
       setLoadingLogbook(false);
     }
@@ -209,21 +220,29 @@ function SupervisorDashboard() {
     }
 
     try {
-      await submitLogbookFeedback(selectedLogbook.id, {
-        comment: feedbackText,
-        action: reviewDecision
-      });
-
-      alert("Logbook feedback saved successfully!");
+      const saveFeedback = selectedLogbook.feedback?.trim()
+        ? updateLogbookFeedback
+        : submitLogbookFeedback;
+      await saveFeedback(selectedLogbook.id, feedbackText.trim());
       setShowLogbookModal(false);
-
-      if (currentStudent) {
-        const updated = await fetchStudentLogbookEntries(currentStudent.placement_id || currentStudent.id);
-        setLogbooksList(updated || []);
-      }
     } catch (err) {
       console.error("Error submitting logbook feedback:", err);
-      alert("Failed to save feedback to server.");
+      alert(err.response?.data?.detail || err.message || "Failed to save feedback.");
+      return;
+    }
+
+    try {
+      const placementId = selectedLogbook.placement;
+      const updated = await fetchStudentLogbookEntries(placementId);
+      setLogbooksList((entries) => [
+        ...entries.filter((entry) => Number(entry.placement) !== Number(placementId)),
+        ...updated,
+      ]);
+      setLoadError('');
+      alert("Logbook feedback saved successfully!");
+    } catch (err) {
+      console.error("Feedback was saved, but logbooks could not be refreshed:", err);
+      setLoadError(`Feedback was saved, but the logbook list could not refresh: ${err.message}`);
     }
   }
 
@@ -231,59 +250,168 @@ function SupervisorDashboard() {
     e.preventDefault();
     try {
       await createFieldVisit({
-        placement_id: visitPlacementId,
+        placement: visitPlacementId,
         visit_date: visitDate,
         outcome: visitOutcome,
         notes: visitNotes
       });
-
-      alert("Field visit saved to database!");
-      setShowVisitModal(false);
-
-      const updatedVisits = await fetchFieldVisits();
-      setVisitsList(updatedVisits || []);
     } catch (err) {
       console.error("Error creating field visit:", err);
-      alert("Failed to save field visit.");
+      alert(err.response?.data?.detail || err.message || "Failed to save field visit.");
+      return;
+    }
+
+    setShowVisitModal(false);
+    alert("Field visit saved to database!");
+    try {
+      const updatedVisits = await fetchFieldVisits();
+      setVisitsList(updatedVisits);
+      setLoadError('');
+    } catch (err) {
+      console.error("Field visit was saved, but visits could not be refreshed:", err);
+      setLoadError(`Field visit was saved, but the visits list could not refresh: ${err.message}`);
+    }
+  }
+
+  async function handleCompanyEvaluationSubmit(event) {
+    event.preventDefault();
+    const placementId = Number(currentStudent?.placement_id || currentStudent?.id);
+    const companyScore = Number(companyEvaluationForm.company_score);
+
+    if (!Number.isInteger(placementId) || placementId <= 0) {
+      alert("Select a valid assigned placement before entering the company assessment.");
+      return;
+    }
+    if (!Number.isFinite(companyScore) || companyScore < 0 || companyScore > 60) {
+      alert("Enter a company assessment score from 0 to 60.");
+      return;
+    }
+    if (companyEvaluations.some((evaluation) => getPlacementId(evaluation) === placementId)) {
+      alert("A company assessment has already been submitted for this placement.");
+      return;
+    }
+
+    setSavingCompanyEvaluation(true);
+    setEvaluationError('');
+    try {
+      const evaluation = await submitCompanyEvaluation({
+        placement_id: placementId,
+        company_score: companyScore,
+        remarks: companyEvaluationForm.remarks.trim(),
+      });
+      setCompanyEvaluations((evaluations) => [
+        ...evaluations,
+        { ...(evaluation || {}), placement_id: placementId, company_score: companyScore, remarks: companyEvaluationForm.remarks.trim() },
+      ]);
+      setCompanyEvaluationForm({ company_score: '', remarks: '' });
+      alert("Company supervisor assessment recorded successfully.");
+    } catch (err) {
+      console.error("Error submitting company assessment:", err);
+      setEvaluationError(err.response?.data?.detail || err.message || "Failed to save the company assessment.");
+    } finally {
+      setSavingCompanyEvaluation(false);
+    }
+  }
+
+  async function handleFinaliseEvaluation(placementId, supervisorEvaluationSubmitted = false) {
+    if (!companyEvaluations.some((evaluation) => getPlacementId(evaluation) === placementId)
+      || (!supervisorEvaluationSubmitted
+        && !supervisorEvaluations.some((evaluation) => getPlacementId(evaluation) === placementId))) {
+      setEvaluationError("Both company and school-supervisor assessments are required before finalising.");
+      return false;
+    }
+
+    setFinalisingEvaluation(true);
+    setEvaluationError('');
+    try {
+      await finalisePlacementEvaluation(placementId);
+      setFinalisedPlacements((placements) => new Set(placements).add(placementId));
+      alert("Both assessments were combined and the final result was finalised.");
+      return true;
+    } catch (err) {
+      console.error("Error finalising evaluation:", err);
+      setEvaluationError(
+        err.response?.data?.detail
+          || err.message
+          || "The assessments were saved, but the final result could not be finalised."
+      );
+      return false;
+    } finally {
+      setFinalisingEvaluation(false);
     }
   }
 
   async function handleEvaluationSubmit() {
+    const placementId = Number(currentStudent?.placement_id || currentStudent?.id);
+    const hasCompanyEvaluation = companyEvaluations.some((evaluation) => getPlacementId(evaluation) === placementId);
+    if (!hasCompanyEvaluation) {
+      alert("Record the company supervisor's assessment before submitting the school-supervisor assessment.");
+      return;
+    }
+    if (completedRubricItems !== rubricScores.length) {
+      alert("Please score every school-supervisor rubric item before submitting.");
+      return;
+    }
     if (!remarks.trim()) {
       alert("Please enter supervisor remarks.");
       return;
     }
 
-    const placementId = currentStudent?.placement_id || currentStudent?.id;
+    if (!Number.isInteger(placementId) || placementId <= 0) {
+      alert("Select a valid assigned placement before submitting the assessment.");
+      return;
+    }
+    if (supervisorEvaluations.some((evaluation) => getPlacementId(evaluation) === placementId)) {
+      alert("A school-supervisor assessment has already been submitted for this placement.");
+      return;
+    }
 
+    setSavingSupervisorEvaluation(true);
+    setEvaluationError('');
     try {
-      await submitSupervisorEvaluation({
-        placement_id: placementId,
+      const evaluation = await submitSupervisorEvaluation({
+        placement: placementId,
         raw_score: totalRawScore,
         percentage: calculatedPercent,
         grade: finalGrade,
-        remarks: remarks
+        remarks: remarks.trim()
       });
 
-      if (placementId) {
-        await finaliseStudentEvaluation(placementId);
+      setSupervisorEvaluations((evaluations) => [
+        ...evaluations,
+        {
+          ...(evaluation || {}),
+          placement_id: placementId,
+          raw_score: totalRawScore,
+          supervisor_score: totalRawScore,
+          remarks: remarks.trim(),
+        },
+      ]);
+      const finalised = await handleFinaliseEvaluation(placementId, true);
+      if (!finalised) {
+        alert("School-supervisor assessment submitted, but the final result still needs to be finalised.");
       }
-
-      alert("Academic evaluation submitted and finalized successfully!");
     } catch (err) {
       console.error("Error submitting evaluation:", err);
-      alert("Failed to submit evaluation.");
+      setEvaluationError(err.response?.data?.detail || err.message || "Failed to submit the school-supervisor assessment.");
+    } finally {
+      setSavingSupervisorEvaluation(false);
     }
   }
 
   async function goToAssessment(student) {
     setCurrentStudent(student);
     setActiveTab('assessment');
+    setRubricScores(createRubricScores());
+    setRemarks('');
+    setCompanyEvaluationForm({ company_score: '', remarks: '' });
+    setEvaluationError('');
     try {
-      const entries = await fetchStudentLogbookEntries(student.placement_id || student.id);
-      setLogbooksList(entries || []);
+      const entries = await fetchStudentLogbookEntries(student.placement_id);
+      setLogbooksList(entries);
     } catch (err) {
       console.error("Error fetching logbooks for student:", err);
+      alert(err.response?.data?.detail || err.message || "Could not load this student's logbooks.");
     }
   }
 
@@ -385,6 +513,7 @@ function SupervisorDashboard() {
 
         <div className="content-body">
           {loading && <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>Loading backend data...</p>}
+          {loadError && <p role="alert" style={{ padding: '1rem', color: '#b91c1c' }}>{loadError}</p>}
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
@@ -440,7 +569,7 @@ function SupervisorDashboard() {
                     <>
                       {placementsList.slice(0, 2).map((p, idx) => (
                         <li key={`act-plc-${idx}`}>
-                          Placement request submitted by <strong>{p.student_name || p.student || 'Student'}</strong> for <strong>{p.company || p.company_name || 'Host Org'}</strong>
+                          Placement recorded for <strong>{p.student_name}</strong> at <strong>{p.company}</strong>
                         </li>
                       ))}
                       {logbooksList.slice(0, 3).map((item, idx) => (
@@ -450,7 +579,7 @@ function SupervisorDashboard() {
                       ))}
                       {visitsList.slice(0, 2).map((visit, idx) => (
                         <li key={`act-vis-${idx}`}>
-                          Field Visit logged for <strong>{visit.student_name || visit.company || 'Intern'}</strong> ({visit.visit_date})
+                          Field Visit logged for <strong>{visit.student_name || visit.company_name || 'Intern'}</strong> ({visit.visit_date})
                         </li>
                       ))}
                     </>
@@ -460,11 +589,11 @@ function SupervisorDashboard() {
             </section>
           )}
 
-          {/* TAB 2: PLACEMENTS (NEWLY ADDED) */}
+          {/* TAB 2: PLACEMENTS */}
           {activeTab === 'placements' && (
             <section className="tab-view">
               <div className="action-header">
-                <h1 className="page-title">Student Internship Placements</h1>
+                <h1 className="page-title">Assigned Student Placements</h1>
               </div>
               <div className="card-box">
                 <table className="data-table">
@@ -472,34 +601,24 @@ function SupervisorDashboard() {
                     <tr>
                       <th>Student</th>
                       <th>Company / Organization</th>
-                      <th>Role / Title</th>
-                      <th>Location</th>
                       <th>Status</th>
-                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {placementsList.length === 0 ? (
-                      <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem' }}>No student placements submitted yet.</td></tr>
+                      <tr><td colSpan="3" style={{ textAlign: 'center', padding: '1.5rem' }}>No assigned placements found.</td></tr>
                     ) : (
                       placementsList.map((item) => (
                         <tr key={item.id}>
-                          <td><strong>{item.student_name || item.student || 'Student'}</strong></td>
-                          <td>{item.company || item.company_name || 'Host Org'}</td>
-                          <td>{item.role || item.job_title || 'Intern'}</td>
-                          <td>{item.location || 'N/A'}</td>
+                          <td><strong>{item.student_name}</strong></td>
+                          <td>{item.company}</td>
                           <td>
                             <span className="pill-status" style={{
-                              background: (item.status || '').toUpperCase() === 'APPROVED' ? '#ecfdf5' : (item.status || '').toUpperCase() === 'REJECTED' ? '#fef2f2' : '#fef3c7',
-                              color: (item.status || '').toUpperCase() === 'APPROVED' ? '#10b981' : (item.status || '').toUpperCase() === 'REJECTED' ? '#ef4444' : '#d97706'
+                              background: item.status === 'active' ? '#ecfdf5' : item.status === 'rejected' ? '#fef2f2' : '#fef3c7',
+                              color: item.status === 'active' ? '#10b981' : item.status === 'rejected' ? '#ef4444' : '#d97706'
                             }}>
-                              {item.status || 'PENDING'}
+                              {item.status}
                             </span>
-                          </td>
-                          <td>
-                            <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} onClick={() => openPlacementModal(item)}>
-                              Review & Decision
-                            </button>
                           </td>
                         </tr>
                       ))
@@ -535,20 +654,20 @@ function SupervisorDashboard() {
                       logbooksList.map((item) => (
                         <tr key={item.id}>
                           <td><strong>{item.student_name || item.student || 'Student'}</strong></td>
-                          <td>{item.company || 'Host Company'}</td>
+                          <td>{item.company_name || 'Host Company'}</td>
                           <td>Week {item.week_number || item.week || 1}</td>
-                          <td>{item.created_at ? item.created_at.split('T')[0] : item.date || 'N/A'}</td>
+                          <td>{item.submission_date ? item.submission_date.split('T')[0] : 'N/A'}</td>
                           <td>
                             <span className="pill-status" style={{
-                              background: item.status === 'APPROVED' ? '#ecfdf5' : item.status === 'REJECTED' ? '#fef2f2' : '#fef3c7',
-                              color: item.status === 'APPROVED' ? '#10b981' : item.status === 'REJECTED' ? '#ef4444' : '#d97706'
+                              background: item.status === 'reviewed' ? '#ecfdf5' : '#fef3c7',
+                              color: item.status === 'reviewed' ? '#10b981' : '#d97706'
                             }}>
-                              {item.status || 'PENDING'}
+                              {item.status}
                             </span>
                           </td>
                           <td>
                             <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} onClick={() => openLogbookModal(item)}>
-                              Review & Decision
+                              Review & Feedback
                             </button>
                           </td>
                         </tr>
@@ -585,9 +704,9 @@ function SupervisorDashboard() {
                       visitsList.map((item, idx) => (
                         <tr key={idx}>
                           <td><strong>{item.student_name || item.student || 'Assigned Intern'}</strong></td>
-                          <td>{item.company || item.location || 'Host Org'}</td>
+                          <td>{item.company_name || 'Host Org'}</td>
                           <td>{item.visit_date || item.date}</td>
-                          <td><span className="grade-badge">{item.outcome || 'SATISFACTORY'}</span></td>
+                          <td><span className="grade-badge">{(item.outcome || 'satisfactory').replace('_', ' ').toUpperCase()}</span></td>
                           <td>{item.notes || 'N/A'}</td>
                         </tr>
                       ))
@@ -627,7 +746,7 @@ function SupervisorDashboard() {
                           <td><strong>{item.name || item.student_name}</strong></td>
                           <td>{item.program || 'Computer Science'}</td>
                           <td>{item.company || item.placement_company || 'Host Org'}</td>
-                          <td>{item.progress || 'N/A'}</td>
+                          <td>{item.progress || `${item.logbooks_reviewed}/${item.logbooks_total} logbooks reviewed`}</td>
                           <td>
                             <span className={item.risk_status === 'AT_RISK' ? 'risk-tag-high' : 'risk-tag-normal'}>
                               {item.risk_status === 'AT_RISK' ? 'At Risk' : 'On Track'}
@@ -653,13 +772,30 @@ function SupervisorDashboard() {
               <div className="sub-breadcrumb">SUPERVISOR PORTAL / ACADEMIC EVALUATION</div>
               
               <div className="action-header">
-                <h1 className="page-title">University Academic Supervisor Assessment</h1>
+                <h1 className="page-title">Placement Assessment</h1>
                 <div className="action-buttons">
                   <button className="btn btn-secondary" onClick={() => window.print()}>📄 Export Form-40 PDF</button>
-                  <button className="btn btn-secondary" onClick={() => alert("Draft saved!")}>Save Draft</button>
-                  <button className="btn btn-primary" onClick={handleEvaluationSubmit}>Ratify & Submit Assessment</button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleEvaluationSubmit}
+                    disabled={
+                      !currentStudent
+                      || !companyAssessmentSubmitted
+                      || schoolAssessmentSubmitted
+                      || completedRubricItems !== rubricScores.length
+                      || !remarks.trim()
+                      || savingSupervisorEvaluation
+                    }
+                  >
+                    {schoolAssessmentSubmitted
+                      ? "School Assessment Submitted"
+                      : savingSupervisorEvaluation
+                        ? "Submitting..."
+                        : "Submit School Assessment"}
+                  </button>
                 </div>
               </div>
+              {evaluationError && <p role="alert" style={{ marginBottom: '1rem', color: '#b91c1c' }}>{evaluationError}</p>}
 
               {!currentStudent ? (
                 <div className="card-box" style={{ padding: '2rem', textAlign: 'center' }}>
@@ -691,13 +827,113 @@ function SupervisorDashboard() {
                     </div>
 
                     <div className="co-eval-section">
-                      <span className="section-label">LOGBOOK COMPLIANCE</span>
+                      <span className="section-label">SCHOOL-SUPERVISOR SCORE</span>
                       <div className="score-badge-row">
-                        <span className="score-large">{totalRawScore}.00 / 60.00</span>
+                        <span className="score-large">{displayedSchoolScore} / 40</span>
                         <span className="grade-badge">{finalGrade.split(' ')[0]}</span>
                       </div>
-                      <div className="verified-status">Logbook Verified</div>
+                      <div className="verified-status">
+                        {schoolAssessmentSubmitted ? "Assessment submitted" : "Assessment pending"}
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="card-box" style={{ marginBottom: '1.5rem' }}>
+                    <div className="rubric-header">
+                      <div>
+                        <h2>Step 1: Company Supervisor Assessment</h2>
+                        <p>Record the company supervisor's assessment from the evaluation sheet (60 points).</p>
+                      </div>
+                      <span className="progress-pill">
+                        {companyAssessmentSubmitted ? "Submitted" : "Awaiting company assessment"}
+                      </span>
+                    </div>
+                    {companyAssessmentSubmitted ? (
+                      <div>
+                        <p><strong>Company score:</strong> {companyEvaluation.company_score} / 60</p>
+                        {companyEvaluation.remarks && (
+                          <p style={{ marginTop: '0.5rem' }}>
+                            <strong>Company feedback:</strong> {companyEvaluation.remarks}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <form onSubmit={handleCompanyEvaluationSubmit}>
+                        <div className="remarks-box">
+                          <label htmlFor="company-assessment-score">Company assessment score (0-60)</label>
+                          <input
+                            id="company-assessment-score"
+                            className="form-input"
+                            type="number"
+                            min="0"
+                            max="60"
+                            step="0.01"
+                            required
+                            value={companyEvaluationForm.company_score}
+                            onChange={(event) => setCompanyEvaluationForm((form) => ({
+                              ...form,
+                              company_score: event.target.value,
+                            }))}
+                          />
+                        </div>
+                        <div className="remarks-box">
+                          <label htmlFor="company-assessment-remarks">Company supervisor feedback</label>
+                          <textarea
+                            id="company-assessment-remarks"
+                            rows="3"
+                            value={companyEvaluationForm.remarks}
+                            onChange={(event) => setCompanyEvaluationForm((form) => ({
+                              ...form,
+                              remarks: event.target.value,
+                            }))}
+                            placeholder="Enter the company supervisor's remarks from the assessment."
+                          />
+                        </div>
+                        <button className="btn btn-primary" type="submit" disabled={savingCompanyEvaluation}>
+                          {savingCompanyEvaluation ? "Saving..." : "Save Company Assessment"}
+                        </button>
+                      </form>
+                    )}
+                    {companyAssessmentSubmitted && schoolAssessmentSubmitted && !selectedPlacementFinalised && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <p className="meta-text">
+                          Both score components are available. Finalise the combined result using the evaluation service.
+                        </p>
+                        <button
+                          className="btn btn-primary"
+                          type="button"
+                          disabled={finalisingEvaluation}
+                          onClick={() => handleFinaliseEvaluation(selectedPlacementId)}
+                        >
+                          {finalisingEvaluation ? "Finalising..." : "Retry Finalisation"}
+                        </button>
+                      </div>
+                    )}
+                    {selectedPlacementFinalised && (
+                      <p className="verified-status" style={{ marginTop: '1rem' }}>
+                        Final result finalised by the system.
+                      </p>
+                    )}
+                    {companyAssessmentSubmitted && schoolAssessmentSubmitted && (
+                      <div className="score-breakdown" style={{ marginTop: '1rem' }}>
+                        <div className="breakdown-row">
+                          <span>Company (out of 60)</span>
+                          <strong>{companyEvaluation.company_score}</strong>
+                        </div>
+                        <div className="breakdown-row">
+                          <span>School supervisor (out of 40)</span>
+                          <strong>{displayedSchoolScore}</strong>
+                        </div>
+                        {selectedPlacementFinalised && (
+                          <div className="breakdown-row">
+                            <span>Combined score (out of 100)</span>
+                            <strong>
+                              {Number(companyEvaluation.company_score) + displayedSchoolScore}
+                            </strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Rubric Grid */}
@@ -705,13 +941,25 @@ function SupervisorDashboard() {
                     <div className="rubric-container">
                       <div className="rubric-header">
                         <div>
-                          <h2>Academic Rubric Evaluation</h2>
-                          <p>Score 1 to 10 points per criterion based on student logbooks and progress.</p>
+                          <h2>Step 2: School Supervisor Assessment</h2>
+                          <p>Score each criterion from 0 to 10, for a total of 40 points, and provide feedback.</p>
                         </div>
-                        <span className="progress-pill">Progress: <strong>6 / 6</strong> Completed</span>
+                        <span className="progress-pill">
+                          Progress: <strong>{schoolAssessmentSubmitted ? rubricScores.length : completedRubricItems} / {rubricScores.length}</strong> Completed
+                        </span>
                       </div>
 
-                      {rubricScores.map((item) => (
+                      {schoolAssessmentSubmitted ? (
+                        <div className="card-box">
+                          <h3>School-supervisor assessment submitted</h3>
+                          <p style={{ marginTop: '0.5rem' }}>
+                            Score: <strong>{displayedSchoolScore} / 40</strong>
+                          </p>
+                          <p style={{ marginTop: '0.5rem', whiteSpace: 'pre-wrap' }}>
+                            Feedback: {supervisorEvaluation.remarks || "No feedback recorded."}
+                          </p>
+                        </div>
+                      ) : rubricScores.map((item) => (
                         <div className="rubric-card" key={item.id}>
                           <div className="rubric-card-top">
                             <div className="criterion-title-box">
@@ -722,12 +970,13 @@ function SupervisorDashboard() {
                           </div>
                           <p className="criterion-desc">{item.description}</p>
                           <div className="rating-scale">
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((s) => (
+                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((s) => (
                               <button 
                                 key={s} 
                                 type="button" 
                                 className={item.score === s ? 'score-btn selected' : 'score-btn'} 
                                 onClick={() => updateScore(item.id, s)}
+                                disabled={schoolAssessmentSubmitted}
                               >
                                 {s}
                               </button>
@@ -743,34 +992,43 @@ function SupervisorDashboard() {
                         <h2 className="scorecard-title">Academic Scorecard</h2>
 
                         <div className="score-display">
-                          <span className="raw-label">Raw Score:</span>
-                          <div className="raw-value">{totalRawScore} <span className="max-value">/ 60</span></div>
+                          <span className="raw-label">School supervisor raw score:</span>
+                          <div className="raw-value">{displayedSchoolScore} <span className="max-value">/ 40</span></div>
                         </div>
 
                         <div className="progress-bar-bg">
-                          <div className="progress-bar-fill" style={{ width: calculatedPercent + '%' }}></div>
+                          <div className="progress-bar-fill" style={{ width: `${schoolAssessmentSubmitted ? (displayedSchoolScore / 40) * 100 : calculatedPercent}%` }}></div>
                         </div>
 
                         <div className="score-breakdown">
                           <div className="breakdown-row">
-                            <span>Percentage:</span>
-                            <strong>{calculatedPercent}%</strong>
+                            <span>School assessment:</span>
+                            <strong>{displayedSchoolScore} / 40</strong>
                           </div>
                           <div className="breakdown-row">
-                            <span>Grade Category:</span>
-                            <strong className="grade-text">{finalGrade}</strong>
+                            <span>Company assessment:</span>
+                            <strong>{companyAssessmentSubmitted ? `${companyEvaluation.company_score} / 60` : "Pending"}</strong>
                           </div>
+                          {companyAssessmentSubmitted && (
+                            <div className="breakdown-row">
+                              <span>Combined points:</span>
+                              <strong>{Number(companyEvaluation.company_score) + displayedSchoolScore} / 100</strong>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="remarks-box">
-                          <label>Supervisor Remarks & Feedback:</label>
-                          <textarea 
-                            rows="4" 
-                            placeholder="Enter constructive feedback..."
-                            value={remarks}
-                            onChange={(e) => setRemarks(e.target.value)}
-                          />
-                        </div>
+                        {!schoolAssessmentSubmitted && (
+                          <div className="remarks-box">
+                            <label htmlFor="school-assessment-remarks">School supervisor feedback</label>
+                            <textarea
+                              id="school-assessment-remarks"
+                              rows="4"
+                              placeholder="Enter constructive feedback..."
+                              value={remarks}
+                              onChange={(e) => setRemarks(e.target.value)}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -792,12 +1050,12 @@ function SupervisorDashboard() {
               <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
                 <div className="stat-card">
                   <span className="stat-label">Assigned Workload</span>
-                  <span className="stat-value">{workloadReport?.assigned_students ?? studentsList.length} Students</span>
+                  <span className="stat-value">{workloadReport?.total_students ?? studentsList.length} Students</span>
                 </div>
                 <div className="stat-card">
                   <span className="stat-label">Reviewed Logbooks</span>
                   <span className="stat-value text-blue">
-                    {logbooksList.filter(l => l.status === 'APPROVED' || l.status === 'REJECTED').length} / {logbooksList.length}
+                    {logbooksList.filter(l => l.status === 'reviewed').length} / {logbooksList.length}
                   </span>
                 </div>
                 <div className="stat-card">
@@ -867,38 +1125,6 @@ function SupervisorDashboard() {
         </div>
       </main>
 
-      {/* PLACEMENT MODAL (NEWLY ADDED) */}
-      {showPlacementModal && selectedPlacement && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h3>Review Internship Placement</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              Student: <strong>{selectedPlacement.student_name || selectedPlacement.student || 'Student'}</strong>
-            </p>
-            <div style={{ background: 'var(--light-bg)', padding: '1rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem' }}>
-              <p><strong>Company:</strong> {selectedPlacement.company || selectedPlacement.company_name || 'N/A'}</p>
-              <p style={{ marginTop: '0.3rem' }}><strong>Role:</strong> {selectedPlacement.role || selectedPlacement.job_title || 'N/A'}</p>
-              <p style={{ marginTop: '0.3rem' }}><strong>Location:</strong> {selectedPlacement.location || 'N/A'}</p>
-            </div>
-
-            <div className="remarks-box" style={{ marginTop: '1rem' }}>
-              <label>Supervisor Remarks / Notes:</label>
-              <textarea 
-                rows="3" 
-                placeholder="Type remarks or feedback for placement approval/rejection..." 
-                value={placementRemarks} 
-                onChange={(e) => setPlacementRemarks(e.target.value)} 
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-              <button className="btn btn-secondary" onClick={() => setShowPlacementModal(false)}>Cancel</button>
-              <button className="btn btn-secondary" style={{ color: '#ef4444', borderColor: '#fca5a5' }} onClick={handleRejectPlacement}>Reject</button>
-              <button className="btn btn-primary" onClick={handleApprovePlacement}>Approve Placement</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* LOGBOOK MODAL */}
       {showLogbookModal && selectedLogbook && (
         <div className="modal-overlay">
@@ -912,20 +1138,8 @@ function SupervisorDashboard() {
               {loadingLogbook ? (
                 <p style={{ marginTop: '0.4rem' }}>Loading full logbook entry...</p>
               ) : (
-                <p style={{ marginTop: '0.4rem' }}>{selectedLogbook.content || selectedLogbook.summary || 'No entry content provided.'}</p>
+                <p style={{ marginTop: '0.4rem', whiteSpace: 'pre-wrap' }}>{selectedLogbook.content || 'No entry content provided.'}</p>
               )}
-            </div>
-
-            <div className="remarks-box" style={{ marginTop: '0.5rem' }}>
-              <label>Review Decision:</label>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.3rem' }}>
-                <label style={{ fontWeight: 'normal', cursor: 'pointer' }}>
-                  <input type="radio" name="decision" value="APPROVED" checked={reviewDecision === 'APPROVED'} onChange={() => setReviewDecision('APPROVED')} /> Approve Entry
-                </label>
-                <label style={{ fontWeight: 'normal', cursor: 'pointer' }}>
-                  <input type="radio" name="decision" value="REJECTED" checked={reviewDecision === 'REJECTED'} onChange={() => setReviewDecision('REJECTED')} /> Request Revisions
-                </label>
-              </div>
             </div>
 
             <div className="remarks-box" style={{ marginTop: '1rem' }}>
@@ -939,7 +1153,7 @@ function SupervisorDashboard() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
               <button className="btn btn-secondary" onClick={() => setShowLogbookModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveLogbookFeedback} disabled={loadingLogbook}>Submit Decision</button>
+              <button className="btn btn-primary" onClick={saveLogbookFeedback} disabled={loadingLogbook}>Submit Feedback</button>
             </div>
           </div>
         </div>
@@ -965,9 +1179,9 @@ function SupervisorDashboard() {
               <div className="remarks-box" style={{ marginTop: '1rem' }}>
                 <label>Outcome Rating:</label>
                 <select className="form-input" value={visitOutcome} onChange={(e) => setVisitOutcome(e.target.value)}>
-                  <option value="SATISFACTORY">SATISFACTORY</option>
-                  <option value="NEEDS_IMPROVEMENT">NEEDS IMPROVEMENT</option>
-                  <option value="EXCELLENT">EXCELLENT</option>
+                  <option value="satisfactory">SATISFACTORY</option>
+                  <option value="needs_improvement">NEEDS IMPROVEMENT</option>
+                  <option value="excellent">EXCELLENT</option>
                 </select>
               </div>
               <div className="remarks-box" style={{ marginTop: '1rem' }}>

@@ -1,160 +1,100 @@
-import axios from 'axios';
+import client from "./client";
 
-// Live Production Backend URL hosted on Railway
-const API_BASE_URL = 'https://uimsystem-production.up.railway.app'; 
+function getResults(data, endpoint) {
+  if (!data || !Array.isArray(data.results)) {
+    throw new Error(`${endpoint} returned an invalid response: expected a results array.`);
+  }
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+  return data.results;
+}
 
-// Interceptor to automatically attach JWT Bearer token from localStorage
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+function getEvaluationResults(data, endpoint) {
+  if (Array.isArray(data)) {
+    return data;
+  }
 
-/* ==========================================================================
-   1. AUTHENTICATION
-   ========================================================================== */
-export const loginUser = async (credentials) => {
-  const response = await api.post('/api/auth/login/', credentials);
-  return response.data;
-};
+  if (data && Array.isArray(data.results)) {
+    return data.results;
+  }
 
-export const fetchCurrentUser = async () => {
-  const response = await api.get('/api/auth/me/');
-  return response.data;
-};
+  throw new Error(`${endpoint} returned an invalid response: expected an evaluation array.`);
+}
 
-/* ==========================================================================
-   2. INTERNSHIPS & PLACEMENTS (SUPERVISOR DECISIONS)
-   ========================================================================== */
-
-// GET /api/internships/placements/all/ -> Fetch placements list
-export const fetchPlacements = async () => {
-  const response = await api.get('/api/internships/placements/all/');
-  return response.data;
-};
-
-// PATCH /api/internships/placements/{placement_id}/decision/ -> Approve/Reject placement
-export const updatePlacementDecision = async (placementId, decisionData) => {
-  // decisionData should be: { status: 'APPROVED' | 'REJECTED', comments: '...' }
-  const response = await api.patch(`/api/internships/placements/${placementId}/decision/`, decisionData);
-  return response.data;
-};
-
-export const approvePlacement = async (placementId, { remarks }) => {
-  return updatePlacementDecision(placementId, { status: 'APPROVED', comments: remarks });
-};
-
-export const rejectPlacement = async (placementId, { remarks }) => {
-  return updatePlacementDecision(placementId, { status: 'REJECTED', comments: remarks });
-};
-
-/* ==========================================================================
-   3. LOGBOOKS & ASSIGNED STUDENTS
-   ========================================================================== */
-
-// GET /api/logbooks/students/ -> Fetch supervisor's assigned students
 export const fetchAssignedStudents = async () => {
-  const response = await api.get('/api/logbooks/students/');
-  return response.data;
+  const { data } = await client.get("/logbooks/students/");
+  return getResults(data, "Assigned students endpoint");
 };
 
-// GET /api/logbooks/overview/ -> Global logbook overview
-export const fetchLogbooksOverview = async () => {
-  const response = await api.get('/api/logbooks/overview/');
-  return response.data;
-};
-
-// GET /api/logbooks/students/{placement_id}/entries/ -> Logbooks for specific student
 export const fetchStudentLogbookEntries = async (placementId) => {
-  const response = await api.get(`/api/logbooks/students/${placementId}/entries/`);
-  return response.data;
+  const { data } = await client.get(`/logbooks/students/${placementId}/entries/`);
+  return getResults(data, "Student logbook entries endpoint");
 };
 
-// GET /api/logbooks/{entry_id}/ -> Fetch one logbook entry with its feedback
 export const fetchLogbookEntry = async (entryId) => {
-  const response = await api.get(`/api/logbooks/${entryId}/`);
-  return response.data;
+  const { data } = await client.get(`/logbooks/${entryId}/`);
+  return data;
 };
 
-// POST /api/logbooks/{entry_id}/feedback/ -> Submit logbook feedback
-export const submitLogbookFeedback = async (entryId, feedbackData) => {
-  const response = await api.post(`/api/logbooks/${entryId}/feedback/`, feedbackData);
-  return response.data;
+export const submitLogbookFeedback = async (entryId, comment) => {
+  const { data } = await client.post(`/logbooks/${entryId}/feedback/`, { comment });
+  return data;
 };
 
-// PATCH /api/logbooks/{entry_id}/feedback/update/ -> Update logbook feedback
-export const updateLogbookFeedback = async (entryId, feedbackData) => {
-  const response = await api.patch(`/api/logbooks/${entryId}/feedback/update/`, feedbackData);
-  return response.data;
+export const updateLogbookFeedback = async (entryId, comment) => {
+  const { data } = await client.patch(`/logbooks/${entryId}/feedback/update/`, { comment });
+  return data;
 };
 
-/* ==========================================================================
-   4. FIELD VISITS
-   ========================================================================== */
-
-// GET /api/logbooks/visits/ -> Fetch field visits
 export const fetchFieldVisits = async () => {
-  const response = await api.get('/api/logbooks/visits/');
-  return response.data;
+  const { data } = await client.get("/logbooks/visits/");
+  return getResults(data, "Field visits endpoint");
 };
 
-// POST /api/logbooks/visits/ -> Create new field visit record
-export const createFieldVisit = async (visitData) => {
-  const response = await api.post('/api/logbooks/visits/', visitData);
-  return response.data;
+export const createFieldVisit = async ({ placement, visit_date, notes, outcome }) => {
+  const placementId = Number(placement);
+  if (!Number.isInteger(placementId) || placementId <= 0) {
+    throw new Error("A valid placement ID is required to log a field visit.");
+  }
+
+  const { data } = await client.post("/logbooks/visits/", {
+    placement: placementId,
+    visit_date,
+    notes,
+    outcome,
+  });
+  return data;
 };
 
-/* ==========================================================================
-   5. ACADEMIC EVALUATIONS
-   ========================================================================== */
-
-// GET /api/evaluations/supervisor/ -> Fetch supervisor evaluations
-export const fetchSupervisorEvaluations = async () => {
-  const response = await api.get('/api/evaluations/supervisor/');
-  return response.data;
-};
-
-// POST /api/evaluations/supervisor/ -> Submit evaluation scores
 export const submitSupervisorEvaluation = async (evaluationData) => {
-  const response = await api.post('/api/evaluations/supervisor/', evaluationData);
-  return response.data;
+  const { data } = await client.post("/evaluations/supervisor/", evaluationData);
+  return data;
 };
 
-// POST /api/evaluations/{placement_id}/finalise/ -> Finalise student assessment
-export const finaliseStudentEvaluation = async (placementId) => {
-  const response = await api.post(`/api/evaluations/${placementId}/finalise/`);
-  return response.data;
+export const fetchCompanyEvaluations = async () => {
+  const { data } = await client.get("/evaluations/company/");
+  return getEvaluationResults(data, "Company evaluations endpoint");
 };
 
-/* ==========================================================================
-   6. REPORTS & WORKLOAD ANALYTICS
-   ========================================================================== */
+export const submitCompanyEvaluation = async (evaluationData) => {
+  const { data } = await client.post("/evaluations/company/", evaluationData);
+  return data;
+};
+
+export const fetchSupervisorEvaluations = async () => {
+  const { data } = await client.get("/evaluations/supervisor/");
+  return getEvaluationResults(data, "Supervisor evaluations endpoint");
+};
+
+export const finalisePlacementEvaluation = async (placementId) => {
+  const { data } = await client.post(`/evaluations/${placementId}/finalise/`);
+  return data;
+};
 
 export const fetchMyWorkloadReport = async () => {
-  const response = await api.get('/api/reports/my-workload/');
-  return response.data;
-};
+  const { data } = await client.get("/reports/my-workload/");
+  if (!data || !Array.isArray(data.results) || !Number.isInteger(data.total_students)) {
+    throw new Error("Supervisor workload endpoint returned an invalid response.");
+  }
 
-export const fetchSupervisorWorkloadReport = async () => {
-  const response = await api.get('/api/reports/supervisor-workload/');
-  return response.data;
+  return data;
 };
-
-export const fetchPerformanceReport = async () => {
-  const response = await api.get('/api/reports/performance/');
-  return response.data;
-};
-
-export default api;

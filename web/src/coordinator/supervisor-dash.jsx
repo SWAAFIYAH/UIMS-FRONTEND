@@ -746,8 +746,8 @@ export function AssignedStudentsDashboard() {
   const submitCompanyEvaluation = async () => {
     if (!evaluationModal) return;
     const score = Number(evaluationForm.company_score);
-    if (!Number.isFinite(score) || score < 0 || score > 40) {
-      toast("Enter a company score from 0 to 40.");
+    if (!Number.isFinite(score) || score < 0 || score > 60) {
+      toast("Enter a company score from 0 to 60.");
       return;
     }
 
@@ -922,12 +922,12 @@ export function AssignedStudentsDashboard() {
             </div>
           </div>
           <div className="formgroup">
-            <label htmlFor="company-evaluation-score">Company Score (0-40)</label>
+            <label htmlFor="company-evaluation-score">Company Score (0-60)</label>
             <input
               id="company-evaluation-score"
               type="number"
               min="0"
-              max="40"
+              max="60"
               step="0.01"
               value={evaluationForm.company_score}
               onChange={(event) => setEvaluationForm((form) => ({
