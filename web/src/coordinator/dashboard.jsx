@@ -599,7 +599,7 @@ const getApiErrorMessage = (error, action = "complete this request") => {
     return "The server returned information we couldn't display. Please try again later.";
   }
   if (status === 401) return "Your session may have expired. Please sign in again.";
-  if (status === 403) return "You don't have permission to do this.";
+  if (status === 403) return "The server rejected the request (HTTP 403).";
   if (action === "assign the supervisor" && (status === 400 || status === 404)) {
     return "We couldn't assign that supervisor. Check the supervisor ID and make sure the account is active.";
   }

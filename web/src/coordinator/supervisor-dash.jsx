@@ -629,16 +629,40 @@ const mapAssignedStudent = (item, index) => {
   };
 };
 
+const getEvaluationResults = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  throw new Error("Unexpected evaluation response: expected a results array.");
+};
+const getEvaluationPlacementId = (evaluation) => {
+  const placement = evaluation.placement;
+  return evaluation.placement_id ?? (typeof placement === "object" ? placement?.id : placement);
+};
+const getSupervisorScore = (evaluation) =>
+  evaluation.supervisor_score ?? evaluation.score ?? evaluation.marks ?? evaluation.evaluation_score ?? evaluation.total_score;
+const evaluationRequestError = (error, action) => {
+  const detail = error.response?.data?.detail || error.response?.data?.error;
+  if (detail) return detail;
+  if (error.response) return `${action} failed (HTTP ${error.response.status}).`;
+  if (error.isAxiosError) return `Could not connect to ${action.toLowerCase()}. Check your connection and try again.`;
+  return error.message || `${action} failed.`;
+};
+
 export function AssignedStudentsDashboard() {
   const [students, setStudents] = useState([]);
   const [companyEvaluations, setCompanyEvaluations] = useState([]);
+  const [supervisorEvaluations, setSupervisorEvaluations] = useState([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [evaluationError, setEvaluationError] = useState("");
   const [evaluationModal, setEvaluationModal] = useState(null);
   const [evaluationForm, setEvaluationForm] = useState({ company_score: "", remarks: "" });
   const [savingEvaluation, setSavingEvaluation] = useState(false);
+  const [supervisorEvaluationModal, setSupervisorEvaluationModal] = useState(null);
+  const [supervisorEvaluationForm, setSupervisorEvaluationForm] = useState({ supervisor_score: "", remarks: "" });
+  const [savingSupervisorEvaluation, setSavingSupervisorEvaluation] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastShow, setToastShow] = useState(false);
   const loadRef = useRef(null);
@@ -662,12 +686,16 @@ export function AssignedStudentsDashboard() {
       setRefreshing(true);
 
       try {
-        const [studentsResult, evaluationsResult] = await Promise.allSettled([
+        const [studentsResult, evaluationsResult, supervisorEvaluationsResult] = await Promise.allSettled([
           client.get("/logbooks/students/", {
             signal: controller.signal,
             timeout: 30000,
           }),
           client.get("/evaluations/company/", {
+            signal: controller.signal,
+            timeout: 30000,
+          }),
+          client.get("/evaluations/supervisor/", {
             signal: controller.signal,
             timeout: 30000,
           }),
@@ -681,17 +709,34 @@ export function AssignedStudentsDashboard() {
         if (!Array.isArray(results)) {
           throw new Error("Unexpected assigned-students response: expected a results array.");
         }
-        const evaluations =
-          evaluationsResult.status === "fulfilled"
-            ? (
-                Array.isArray(evaluationsResult.value.data)
-                  ? evaluationsResult.value.data
-                  : (Array.isArray(evaluationsResult.value.data?.results) ? evaluationsResult.value.data.results : [])
-              )
-            : [];
+        let submittedCompanyEvaluations = [];
+        let companyEvaluationLoadError = "";
+        if (evaluationsResult.status === "fulfilled") {
+          try {
+            submittedCompanyEvaluations = getEvaluationResults(evaluationsResult.value.data);
+          } catch (evaluationError) {
+            companyEvaluationLoadError = evaluationRequestError(evaluationError, "Load company evaluations");
+          }
+        } else {
+          companyEvaluationLoadError = evaluationRequestError(evaluationsResult.reason, "Load company evaluations");
+        }
+        let submittedSupervisorEvaluations = [];
+        let supervisorEvaluationLoadError = "";
+        if (supervisorEvaluationsResult.status === "fulfilled") {
+          try {
+            submittedSupervisorEvaluations = getEvaluationResults(supervisorEvaluationsResult.value.data);
+          } catch (evaluationError) {
+            supervisorEvaluationLoadError = evaluationRequestError(evaluationError, "Load supervisor evaluations");
+          }
+        } else {
+          supervisorEvaluationLoadError = evaluationRequestError(supervisorEvaluationsResult.reason, "Load supervisor evaluations");
+        }
+        const evaluationLoadErrors = [companyEvaluationLoadError, supervisorEvaluationLoadError].filter(Boolean);
         if (!cancelled) {
           setStudents(results.map(mapAssignedStudent));
-          setCompanyEvaluations(evaluations);
+          setCompanyEvaluations(submittedCompanyEvaluations);
+          setSupervisorEvaluations(submittedSupervisorEvaluations);
+          setEvaluationError(evaluationLoadErrors.join(" "));
           setError("");
         }
       } catch (requestError) {
@@ -766,18 +811,55 @@ export function AssignedStudentsDashboard() {
       toast("Company evaluation submitted successfully.");
     } catch (requestError) {
       console.error("Could not submit company evaluation:", requestError);
-      const status = requestError.response?.status;
-      toast(
-        status === 401
-          ? "Your session may have expired. Please sign in again."
-          : status === 403
-            ? "You do not have permission to submit this evaluation."
-            : requestError.response?.data?.detail ||
-              requestError.response?.data?.error ||
-              "Could not submit the company evaluation."
-      );
+      toast(evaluationRequestError(requestError, "Submit company evaluation"));
     } finally {
       setSavingEvaluation(false);
+    }
+  };
+
+  const openSupervisorEvaluation = (student) => {
+    const existing = supervisorEvaluations.find((evaluation) =>
+      Number(getEvaluationPlacementId(evaluation)) === Number(student.id)
+    );
+    if (existing) {
+      toast(`Supervisor marks already submitted: ${getSupervisorScore(existing) ?? "—"}.`);
+      return;
+    }
+    setSupervisorEvaluationForm({ supervisor_score: "", remarks: "" });
+    setSupervisorEvaluationModal(student);
+  };
+
+  const submitSupervisorEvaluation = async () => {
+    if (!supervisorEvaluationModal) return;
+    const score = Number(supervisorEvaluationForm.supervisor_score);
+    if (supervisorEvaluationForm.supervisor_score.trim() === "" || !Number.isFinite(score) || score < 0) {
+      toast("Enter a valid supervisor mark of 0 or higher.");
+      return;
+    }
+
+    setSavingSupervisorEvaluation(true);
+    try {
+      await client.post("/evaluations/supervisor/", {
+        placement_id: supervisorEvaluationModal.id,
+        supervisor_score: score,
+        remarks: supervisorEvaluationForm.remarks.trim(),
+      });
+      setSupervisorEvaluations((evaluations) => [
+        ...evaluations,
+        {
+          placement_id: supervisorEvaluationModal.id,
+          supervisor_score: score,
+          remarks: supervisorEvaluationForm.remarks.trim(),
+        },
+      ]);
+      setSupervisorEvaluationModal(null);
+      toast("Supervisor marks submitted successfully.");
+      loadRef.current?.();
+    } catch (requestError) {
+      console.error("Could not submit supervisor evaluation:", requestError);
+      toast(evaluationRequestError(requestError, "Submit supervisor marks"));
+    } finally {
+      setSavingSupervisorEvaluation(false);
     }
   };
 
@@ -835,29 +917,33 @@ export function AssignedStudentsDashboard() {
         </div>
 
         {error && <div className="card" role="alert" style={{ padding: 16 }}>{error}</div>}
+        {evaluationError && <div className="card" role="alert" style={{ padding: 16 }}>{evaluationError}</div>}
 
         <div className="card">
           <div className="tablewrap">
             <table>
               <thead>
                 <tr>
-                  {["Student", "Student ID", "Program", "Company", "Placement Status", "Internship Dates", "Evaluation"].map((heading) => (
+                  {["Student", "Student ID", "Program", "Company", "Placement Status", "Internship Dates", "Company Evaluation", "Supervisor Marks"].map((heading) => (
                     <th key={heading}>{heading}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="muted" style={{ textAlign: "center", padding: 32 }}>Loading assigned students…</td></tr>
+                  <tr><td colSpan={8} className="muted" style={{ textAlign: "center", padding: 32 }}>Loading assigned students…</td></tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 32 }}>
+                    <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 32 }}>
                       {error ? "Assigned students could not be loaded." : students.length ? "No students match your search." : "No students have been assigned to you yet."}
                     </td>
                   </tr>
                 ) : filteredStudents.map((student) => {
                   const evaluated = companyEvaluations.some((evaluation) =>
                     Number(evaluation.placement_id ?? evaluation.placement) === Number(student.id)
+                  );
+                  const supervisorEvaluation = supervisorEvaluations.find((evaluation) =>
+                    Number(getEvaluationPlacementId(evaluation)) === Number(student.id)
                   );
                   return (
                     <tr key={student.id}>
@@ -875,6 +961,21 @@ export function AssignedStudentsDashboard() {
                           onClick={() => openCompanyEvaluation(student)}
                         >
                           {evaluated ? "Submitted" : "Enter Evaluation"}
+                        </button>
+                      </td>
+                      <td>
+                        <div className="muted">
+                          {supervisorEvaluation
+                            ? `Submitted: ${getSupervisorScore(supervisorEvaluation) ?? "—"}`
+                            : "Not submitted"}
+                        </div>
+                        <button
+                          className="action"
+                          type="button"
+                          disabled={Boolean(supervisorEvaluation)}
+                          onClick={() => openSupervisorEvaluation(student)}
+                        >
+                          {supervisorEvaluation ? "Submitted" : "Enter Marks"}
                         </button>
                       </td>
                     </tr>
@@ -946,6 +1047,70 @@ export function AssignedStudentsDashboard() {
                 remarks: event.target.value,
               }))}
               placeholder="Enter the employer's comments or evaluation notes."
+            />
+          </div>
+        </Modal>
+      )}
+
+      {supervisorEvaluationModal && (
+        <Modal
+          title={`Supervisor Evaluation - ${supervisorEvaluationModal.student}`}
+          onClose={() => !savingSupervisorEvaluation && setSupervisorEvaluationModal(null)}
+          footer={
+            <>
+              <button
+                className="btn secondary"
+                type="button"
+                disabled={savingSupervisorEvaluation}
+                onClick={() => setSupervisorEvaluationModal(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                type="button"
+                disabled={savingSupervisorEvaluation}
+                onClick={submitSupervisorEvaluation}
+              >
+                {savingSupervisorEvaluation ? "Submitting…" : "Submit Marks"}
+              </button>
+            </>
+          }
+        >
+          <div className="details">
+            <div className="detail">
+              <span className="detail-label">Student</span>
+              <b>{supervisorEvaluationModal.student}</b>
+            </div>
+            <div className="detail">
+              <span className="detail-label">Company</span>
+              <b>{supervisorEvaluationModal.company}</b>
+            </div>
+          </div>
+          <div className="formgroup">
+            <label htmlFor="supervisor-evaluation-score">Supervisor Marks</label>
+            <input
+              id="supervisor-evaluation-score"
+              type="number"
+              min="0"
+              step="0.01"
+              value={supervisorEvaluationForm.supervisor_score}
+              onChange={(event) => setSupervisorEvaluationForm((form) => ({
+                ...form,
+                supervisor_score: event.target.value,
+              }))}
+            />
+          </div>
+          <div className="formgroup">
+            <label htmlFor="supervisor-evaluation-remarks">Remarks</label>
+            <textarea
+              id="supervisor-evaluation-remarks"
+              value={supervisorEvaluationForm.remarks}
+              onChange={(event) => setSupervisorEvaluationForm((form) => ({
+                ...form,
+                remarks: event.target.value,
+              }))}
+              placeholder="Add evaluation notes."
             />
           </div>
         </Modal>
