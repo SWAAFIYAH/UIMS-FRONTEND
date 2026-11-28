@@ -85,11 +85,6 @@ export const fetchSupervisorEvaluations = async () => {
   return getEvaluationResults(data, "Supervisor evaluations endpoint");
 };
 
-export const finalisePlacementEvaluation = async (placementId) => {
-  const { data } = await client.post(`/evaluations/${placementId}/finalise/`);
-  return data;
-};
-
 export const fetchMyWorkloadReport = async () => {
   const { data } = await client.get("/reports/my-workload/");
   if (!data || !Array.isArray(data.results) || !Number.isInteger(data.total_students)) {

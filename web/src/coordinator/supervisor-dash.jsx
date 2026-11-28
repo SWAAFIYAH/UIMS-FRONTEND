@@ -662,7 +662,7 @@ export function AssignedStudentsDashboard() {
       setRefreshing(true);
 
       try {
-        const [studentsResult, evaluationsResult] = await Promise.allSettled([
+        const [studentsResponse, evaluationsResponse] = await Promise.all([
           client.get("/logbooks/students/", {
             signal: controller.signal,
             timeout: 30000,
@@ -672,23 +672,18 @@ export function AssignedStudentsDashboard() {
             timeout: 30000,
           }),
         ]);
-        if (studentsResult.status !== "fulfilled") {
-          throw studentsResult.reason;
-        }
-        const results = Array.isArray(studentsResult.value.data)
-          ? studentsResult.value.data
-          : studentsResult.value.data?.results;
+        const results = Array.isArray(studentsResponse.data)
+          ? studentsResponse.data
+          : studentsResponse.data?.results;
         if (!Array.isArray(results)) {
           throw new Error("Unexpected assigned-students response: expected a results array.");
         }
-        const evaluations =
-          evaluationsResult.status === "fulfilled"
-            ? (
-                Array.isArray(evaluationsResult.value.data)
-                  ? evaluationsResult.value.data
-                  : (Array.isArray(evaluationsResult.value.data?.results) ? evaluationsResult.value.data.results : [])
-              )
-            : [];
+        const evaluations = Array.isArray(evaluationsResponse.data)
+          ? evaluationsResponse.data
+          : evaluationsResponse.data?.results;
+        if (!Array.isArray(evaluations)) {
+          throw new Error("Unexpected company-evaluations response: expected a results array.");
+        }
         if (!cancelled) {
           setStudents(results.map(mapAssignedStudent));
           setCompanyEvaluations(evaluations);

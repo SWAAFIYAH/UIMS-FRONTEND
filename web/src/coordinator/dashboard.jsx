@@ -565,17 +565,30 @@ const mapLogbook = (entry) => ({
   supervisor: entry.supervisor_name || entry.supervisor || "—",
   status: entry.status || entry.logbook_status || "—",
 });
-const mapEvaluation = (evaluation) => ({
-  ...evaluation,
-  id: evaluation.id ?? evaluation.placement_id ?? `${evaluation.student_id ?? evaluation.student_name ?? "evaluation"}-${evaluation.company ?? evaluation.company_name ?? ""}`,
-  placementId: evaluation.placement_id ?? evaluation.id,
-  student: evaluation.student_name || evaluation.student || "—",
-  company: evaluation.company_name || evaluation.company || "—",
-  supervisor: evaluation.supervisor_name || evaluation.supervisor || "—",
-  status: evaluation.status || evaluation.evaluation_status || evaluation.overall_status || "Unknown",
-  submitted: evaluation.submitted_at || evaluation.submission_date || evaluation.created_at || "—",
-  readyToFinalise: evaluation.ready_to_finalise === true,
-});
+const mapEvaluation = (evaluation) => {
+  const supervisorScore = evaluation.supervisor_score ?? evaluation.raw_score;
+  const status = String(evaluation.status || evaluation.evaluation_status || evaluation.overall_status || "").toLowerCase();
+  const isFinalised = Boolean(evaluation.finalised_at || evaluation.is_finalised)
+    || ["finalised", "finalized"].includes(status);
+  const hasBothScores = evaluation.company_score != null && supervisorScore != null;
+
+  return {
+    ...evaluation,
+    id: evaluation.id ?? evaluation.placement_id ?? `${evaluation.student_id ?? evaluation.student_name ?? "evaluation"}-${evaluation.company ?? evaluation.company_name ?? ""}`,
+    placementId: evaluation.placement_id
+      ?? (typeof evaluation.placement === "object" ? evaluation.placement?.id : evaluation.placement)
+      ?? evaluation.id,
+    supervisor_score: supervisorScore,
+    student: evaluation.student_name || evaluation.student || "—",
+    company: evaluation.company_name || evaluation.company || "—",
+    supervisor: evaluation.supervisor_name || evaluation.supervisor || "—",
+    status: evaluation.status || evaluation.evaluation_status || evaluation.overall_status || "Unknown",
+    submitted: evaluation.submitted_at || evaluation.submission_date || evaluation.created_at || "—",
+    readyToFinalise: hasBothScores
+      && !isFinalised
+      && (evaluation.ready_to_finalise == null || evaluation.ready_to_finalise === true),
+  };
+};
 const getSupervisorId = (supervisor) => {
   const rawId = supervisor.id ?? supervisor.supervisor_id ?? supervisor.user_id ?? supervisor.pk;
   const id = Number(rawId);
@@ -1003,6 +1016,10 @@ export default function OukDashboard({
     }
   };
   const finaliseGrade = async (grade) => {
+    if (grade.company_score == null || grade.supervisor_score == null) {
+      return toast("Both company and UIMS supervisor scores are required before finalising.");
+    }
+
     if (grade.placement_id) {
       try {
         await client.post(`/evaluations/${grade.placement_id}/finalise/`);
@@ -1287,7 +1304,8 @@ export default function OukDashboard({
                       placement.studentId === g.student_id &&
                       placement.company.toLowerCase() === String(g.company).toLowerCase()
                     );
-                    const canFinalise = !g.finalised_at && matchingPlacements.length === 1;
+                    const hasBothScores = g.company_score != null && g.supervisor_score != null;
+                    const canFinalise = !g.finalised_at && hasBothScores && matchingPlacements.length === 1;
                     return (
                       <tr key={`${g.student_id}-${g.company}`}>
                         <td><b>{g.student_name}</b></td><td>{g.company}</td><td>{g.supervisor || "—"}</td>
@@ -1297,7 +1315,7 @@ export default function OukDashboard({
                           {g.finalised_at
                             ? <span className="muted">Finalised</span>
                             : <button className="action" type="button" disabled={!canFinalise} onClick={() => finaliseGrade(g)}>
-                                {canFinalise ? "Finalise" : "Placement unavailable"}
+                                {canFinalise ? "Finalise" : hasBothScores ? "Placement unavailable" : "Waiting for both scores"}
                               </button>}
                         </td>
                       </tr>

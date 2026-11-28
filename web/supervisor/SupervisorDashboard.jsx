@@ -12,7 +12,6 @@ import {
   submitCompanyEvaluation,
   fetchSupervisorEvaluations,
   submitSupervisorEvaluation,
-  finalisePlacementEvaluation,
   fetchMyWorkloadReport,
 } from '../src/api/supervisorApi';
 
@@ -22,6 +21,14 @@ const createRubricScores = () => [
   { id: 3, title: "Problem Solving & Initiative", description: "Ability to analyze technical challenges and propose solutions.", score: null },
   { id: 4, title: "Adaptability & Team Collaboration", description: "Integration into technical teams and response to feedback.", score: null },
 ];
+
+const getOverallGrade = (score) => {
+  if (score >= 70) return "A (First Class)";
+  if (score >= 60) return "B (Upper Second)";
+  if (score >= 50) return "C (Lower Second)";
+  if (score >= 40) return "D (Pass)";
+  return "F (Fail)";
+};
 
 const getPlacementId = (evaluation) => {
   const placement = evaluation?.placement;
@@ -70,7 +77,6 @@ function SupervisorDashboard() {
   const [companyEvaluationForm, setCompanyEvaluationForm] = useState({ company_score: '', remarks: '' });
   const [savingCompanyEvaluation, setSavingCompanyEvaluation] = useState(false);
   const [savingSupervisorEvaluation, setSavingSupervisorEvaluation] = useState(false);
-  const [finalisingEvaluation, setFinalisingEvaluation] = useState(false);
   const [evaluationError, setEvaluationError] = useState('');
 
   // Apply accessibility classes directly to document body
@@ -176,15 +182,11 @@ function SupervisorDashboard() {
   const displayedSchoolScore = schoolAssessmentSubmitted && Number.isFinite(submittedSchoolScore)
     ? submittedSchoolScore
     : totalRawScore;
-  const displayedSchoolPercent = ((displayedSchoolScore / 40) * 100).toFixed(1);
-  let finalGrade = supervisorEvaluation?.grade || "F (Fail)";
-  const gradePercent = schoolAssessmentSubmitted ? displayedSchoolPercent : calculatedPercent;
-  if (!supervisorEvaluation?.grade) {
-    if (gradePercent >= 70) finalGrade = "A (First Class)";
-    else if (gradePercent >= 60) finalGrade = "B (Upper Second)";
-    else if (gradePercent >= 50) finalGrade = "C (Lower Second)";
-    else if (gradePercent >= 40) finalGrade = "D (Pass)";
-  }
+  const companyScore = Number(companyEvaluation?.company_score);
+  const combinedScore = companyAssessmentSubmitted && Number.isFinite(companyScore)
+    ? companyScore + displayedSchoolScore
+    : null;
+  const finalGrade = combinedScore === null ? "Pending" : getOverallGrade(combinedScore);
 
   // Handlers
   function handleTabChange(tabName) {
@@ -304,40 +306,12 @@ function SupervisorDashboard() {
         { ...(evaluation || {}), placement_id: placementId, company_score: companyScore, remarks: companyEvaluationForm.remarks.trim() },
       ]);
       setCompanyEvaluationForm({ company_score: '', remarks: '' });
-      alert("Company supervisor assessment recorded successfully.");
+      alert("Company supervisor marks recorded. You can now enter your UIMS supervisor assessment.");
     } catch (err) {
       console.error("Error submitting company assessment:", err);
       setEvaluationError(err.response?.data?.detail || err.message || "Failed to save the company assessment.");
     } finally {
       setSavingCompanyEvaluation(false);
-    }
-  }
-
-  async function handleFinaliseEvaluation(placementId, supervisorEvaluationSubmitted = false) {
-    if (!companyEvaluations.some((evaluation) => getPlacementId(evaluation) === placementId)
-      || (!supervisorEvaluationSubmitted
-        && !supervisorEvaluations.some((evaluation) => getPlacementId(evaluation) === placementId))) {
-      setEvaluationError("Both company and school-supervisor assessments are required before finalising.");
-      return false;
-    }
-
-    setFinalisingEvaluation(true);
-    setEvaluationError('');
-    try {
-      await finalisePlacementEvaluation(placementId);
-      setFinalisedPlacements((placements) => new Set(placements).add(placementId));
-      alert("Both assessments were combined and the final result was finalised.");
-      return true;
-    } catch (err) {
-      console.error("Error finalising evaluation:", err);
-      setEvaluationError(
-        err.response?.data?.detail
-          || err.message
-          || "The assessments were saved, but the final result could not be finalised."
-      );
-      return false;
-    } finally {
-      setFinalisingEvaluation(false);
     }
   }
 
@@ -365,15 +339,22 @@ function SupervisorDashboard() {
       alert("A school-supervisor assessment has already been submitted for this placement.");
       return;
     }
+    const companyScore = Number(companyEvaluation?.company_score);
+    if (!Number.isFinite(companyScore) || companyScore < 0 || companyScore > 60) {
+      setEvaluationError("The company assessment score is missing or invalid. Record the company marks before submitting your assessment.");
+      return;
+    }
 
     setSavingSupervisorEvaluation(true);
     setEvaluationError('');
     try {
+      const overallScore = companyScore + totalRawScore;
+      const overallGrade = getOverallGrade(overallScore);
       const evaluation = await submitSupervisorEvaluation({
         placement: placementId,
         raw_score: totalRawScore,
         percentage: calculatedPercent,
-        grade: finalGrade,
+        grade: overallGrade,
         remarks: remarks.trim()
       });
 
@@ -384,13 +365,11 @@ function SupervisorDashboard() {
           placement_id: placementId,
           raw_score: totalRawScore,
           supervisor_score: totalRawScore,
+          grade: overallGrade,
           remarks: remarks.trim(),
         },
       ]);
-      const finalised = await handleFinaliseEvaluation(placementId, true);
-      if (!finalised) {
-        alert("School-supervisor assessment submitted, but the final result still needs to be finalised.");
-      }
+      alert("Both assessment scores have been submitted for the coordinator to finalise.");
     } catch (err) {
       console.error("Error submitting evaluation:", err);
       setEvaluationError(err.response?.data?.detail || err.message || "Failed to submit the school-supervisor assessment.");
@@ -827,13 +806,17 @@ function SupervisorDashboard() {
                     </div>
 
                     <div className="co-eval-section">
-                      <span className="section-label">SCHOOL-SUPERVISOR SCORE</span>
+                      <span className="section-label">
+                        {companyAssessmentSubmitted ? "PROVISIONAL OVERALL SCORE" : "UIMS SUPERVISOR SCORE"}
+                      </span>
                       <div className="score-badge-row">
-                        <span className="score-large">{displayedSchoolScore} / 40</span>
+                        <span className="score-large">
+                          {companyAssessmentSubmitted ? combinedScore : displayedSchoolScore} / {companyAssessmentSubmitted ? 100 : 40}
+                        </span>
                         <span className="grade-badge">{finalGrade.split(' ')[0]}</span>
                       </div>
                       <div className="verified-status">
-                        {schoolAssessmentSubmitted ? "Assessment submitted" : "Assessment pending"}
+                        {schoolAssessmentSubmitted ? "Both marks submitted" : "UIMS supervisor assessment pending"}
                       </div>
                     </div>
                   </div>
@@ -842,7 +825,7 @@ function SupervisorDashboard() {
                     <div className="rubric-header">
                       <div>
                         <h2>Step 1: Company Supervisor Assessment</h2>
-                        <p>Record the company supervisor's assessment from the evaluation sheet (60 points).</p>
+                        <p>Enter the company supervisor's submitted marks from the evaluation sheet first (out of 60).</p>
                       </div>
                       <span className="progress-pill">
                         {companyAssessmentSubmitted ? "Submitted" : "Awaiting company assessment"}
@@ -860,7 +843,7 @@ function SupervisorDashboard() {
                     ) : (
                       <form onSubmit={handleCompanyEvaluationSubmit}>
                         <div className="remarks-box">
-                          <label htmlFor="company-assessment-score">Company assessment score (0-60)</label>
+                          <label htmlFor="company-assessment-score">Company supervisor marks (0-60)</label>
                           <input
                             id="company-assessment-score"
                             className="form-input"
@@ -890,28 +873,18 @@ function SupervisorDashboard() {
                           />
                         </div>
                         <button className="btn btn-primary" type="submit" disabled={savingCompanyEvaluation}>
-                          {savingCompanyEvaluation ? "Saving..." : "Save Company Assessment"}
+                          {savingCompanyEvaluation ? "Submitting..." : "Submit Company Marks"}
                         </button>
                       </form>
                     )}
                     {companyAssessmentSubmitted && schoolAssessmentSubmitted && !selectedPlacementFinalised && (
-                      <div style={{ marginTop: '1rem' }}>
-                        <p className="meta-text">
-                          Both score components are available. Finalise the combined result using the evaluation service.
-                        </p>
-                        <button
-                          className="btn btn-primary"
-                          type="button"
-                          disabled={finalisingEvaluation}
-                          onClick={() => handleFinaliseEvaluation(selectedPlacementId)}
-                        >
-                          {finalisingEvaluation ? "Finalising..." : "Retry Finalisation"}
-                        </button>
-                      </div>
+                      <p className="verified-status" role="status" style={{ marginTop: '1rem' }}>
+                        Company and UIMS supervisor scores are submitted and waiting for coordinator finalisation.
+                      </p>
                     )}
                     {selectedPlacementFinalised && (
                       <p className="verified-status" style={{ marginTop: '1rem' }}>
-                        Final result finalised by the system.
+                        Final result has been finalised.
                       </p>
                     )}
                     {companyAssessmentSubmitted && schoolAssessmentSubmitted && (
@@ -958,6 +931,10 @@ function SupervisorDashboard() {
                           <p style={{ marginTop: '0.5rem', whiteSpace: 'pre-wrap' }}>
                             Feedback: {supervisorEvaluation.remarks || "No feedback recorded."}
                           </p>
+                        </div>
+                      ) : !companyAssessmentSubmitted ? (
+                        <div className="card-box" role="status">
+                          Submit the company supervisor's marks above before entering the UIMS supervisor assessment.
                         </div>
                       ) : rubricScores.map((item) => (
                         <div className="rubric-card" key={item.id}>
@@ -1010,10 +987,16 @@ function SupervisorDashboard() {
                             <strong>{companyAssessmentSubmitted ? `${companyEvaluation.company_score} / 60` : "Pending"}</strong>
                           </div>
                           {companyAssessmentSubmitted && (
-                            <div className="breakdown-row">
-                              <span>Combined points:</span>
-                              <strong>{Number(companyEvaluation.company_score) + displayedSchoolScore} / 100</strong>
-                            </div>
+                            <>
+                              <div className="breakdown-row">
+                                <span>Combined points:</span>
+                                <strong>{Number(companyEvaluation.company_score) + displayedSchoolScore} / 100</strong>
+                              </div>
+                              <div className="breakdown-row">
+                                <span>Provisional overall rating:</span>
+                                <strong>{finalGrade}</strong>
+                              </div>
+                            </>
                           )}
                         </div>
 
